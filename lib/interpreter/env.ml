@@ -1,8 +1,6 @@
 open Frontend.Token
 open Value
 
-
-
 let bind name value env =
     match env with 
     | [] -> failwith "the environment should never be empty"

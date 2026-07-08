@@ -6,7 +6,7 @@ let has_valid_ext path =
     
 let () =
     match Sys.argv with
-    | [| _; path |] -> (* expects ABSOLUTE PATH right now, will resolve paths later *)
+    | [| _; path |] -> (* expects an ABSOLUTE PATH right now, will resolve paths later *)
         if not (has_valid_ext path) then 
             print_endline "error: expected file name with .aera extension"
         else
