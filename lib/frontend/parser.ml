@@ -117,7 +117,7 @@ let expect_identifier par =
 
 let parse_type par =
     let (_, par') = next par in (* consume : token *)
-    match expect_identifier par' with (* consume type -> identifier in parser*)
+    match expect_identifier par' with (* consume type -> identifier in parser *)
     | Error e -> Error e
     | Ok (typ, par'') -> Ok (typ, par'')
 
@@ -601,7 +601,6 @@ and item par =
                 | Error e -> Error e
                 | Ok (struct_item, par'') -> Ok (struct_item, par''))
     | Variant -> let (_, par') = next par in 
-        let _ = Printf.printf "item: calling variant_item\n" in
                 (match par' |> variant_item with 
                 | Error e -> Error e
                 | Ok (variant_item, par'') -> Ok (variant_item, par''))
@@ -623,4 +622,19 @@ let rec parse_helper items par =
 
 let parse par =
     let (items, par') = par |> parse_helper [] in 
-    ({ items = items }, par')
+    ({ items = items }, par')    
+
+(* Parse Function for REPL *)
+
+let parse_repl par = 
+    let tok = peek par in 
+    match tok.kind with 
+    | Fn | Struct | Variant -> (match par |> item with 
+                                | Error (msg, _, _) -> Error msg
+                                | Ok (item, _) -> Ok (ReplItem item))
+    | Let | Const -> (match par |> stmt with 
+                    | Error (msg, _, _) -> Error msg
+                    | Ok (stmt, _) -> Ok (ReplStmt stmt))
+    | _ -> (match par |> expr with 
+            | Error (msg, _, _) -> Error msg
+            | Ok(expr, _) -> Ok (ReplExpr expr))

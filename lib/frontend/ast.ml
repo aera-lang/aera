@@ -102,3 +102,11 @@ and const_stmt = {
     typ: string option;
     expr: expr;
 }
+
+(* REPL nodes *)
+
+type repl =
+| ReplItem of item
+| ReplExpr of expr
+| ReplStmt of stmt
+

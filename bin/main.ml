@@ -10,9 +10,9 @@ let () =
         if not (has_valid_ext path) then 
             print_endline "error: expected file name with .aera extension"
         else
-            Interpreter.interpret path
+            Interpreter.Run.interpret path
     | [| _ |] -> 
         print_endline "Welcome to Aera 0.1.0\nType 'quit' to exit.\n";
-        Interpreter.repl ()
+        Interpreter.Repl.repl ()
     | _ -> print_endline "error: expected file name with .aera extension. usage: aera <file>"
 

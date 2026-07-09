@@ -1,21 +1,45 @@
 open Frontend
 open Value
+open Env
 
-let rec eval expr =
+let rec eval_expr expr env =
     match expr with 
     | Frontend.Ast.Literal (LitInt n)                   -> Ok (VInt n)
     | Literal (LitFloat f)                              -> Ok (VFloat f)
     | Literal (LitChar c)                               -> Ok (VChar c)
     | Literal (LitString s)                             -> Ok (VString s)
     | Literal (LitBool b)                               -> Ok (VBool b)
-    | Grouping expr'                                    -> eval expr'
-    | Binary { lhs; op; rhs }                           -> eval_binary lhs op rhs         
-    | Unary { op; rhs }                                 -> eval_unary op rhs
+    | Grouping expr'                                    -> env |> eval_expr expr'
+    | Binary { lhs; op; rhs }                           -> env |> eval_binary lhs op rhs         
+    | Unary { op; rhs }                                 -> env |> eval_unary op rhs
+    | Identifier name                                   -> env |> eval_identifier name
     | _ -> failwith "not implemented yet"
 
-and eval_binary lhs op rhs =
-    let l = eval lhs in 
-    let r = eval rhs in 
+and eval_stmt stmt env =
+    match stmt with 
+    | Frontend.Ast.LetStmt { name; typ; expr; } -> env |> eval_let_stmt name typ expr
+    | ConstStmt { name; typ; expr; } -> env |> eval_const_stmt name typ expr
+
+and eval_let_stmt name typ expr env = (* for now, we are ignoring the typ annotation 
+                                        because we haven't implemented a type checker,
+                                        and it adds unecessary complexitiy *)
+    match expr with 
+    | None -> Error("idk")
+    | Some expr' -> 
+        (match env |> eval_expr expr' with
+        | Error e -> Error e
+        | Ok value -> 
+            Ok (env |> bind name value))
+
+and eval_const_stmt name typ expr env = (* same as let statement *)
+    match env |> eval_expr expr with
+    | Error e -> Error e
+    | Ok value -> 
+        Ok (env |> bind name value)
+
+and eval_binary lhs op rhs env =
+    let l = env |> eval_expr lhs in 
+    let r = env |> eval_expr rhs in 
     match l, r with
     | Ok (VInt a), Ok (VInt b)                          -> eval_binary_int a op b
     | Ok (VFloat a), Ok (VFloat b)                      -> eval_binary_float a op b
@@ -92,8 +116,8 @@ and eval_binary_bool lhs op rhs =
     | Or        -> Ok (VBool (lhs || rhs))
     | _         -> Error ("error: invalid operation on a boolean value")
 
-and eval_unary op rhs = 
-    let r = eval rhs in 
+and eval_unary op rhs env = 
+    let r = env |> eval_expr rhs in 
     match r with
     | Ok (VInt n)       -> n |> eval_unary_int op
     | Ok (VFloat f)     -> f |> eval_unary_float op
@@ -115,3 +139,8 @@ and eval_unary_bool op rhs =
     match op with 
     | Not -> Ok (VBool (not rhs))
     | _ -> Error ("error: invalid unary operation on a floating point value")
+
+and eval_identifier name env =
+    match env |> find name with 
+    | None -> Error ("error: variable not bound to a value")
+    | Some value -> Ok (value)

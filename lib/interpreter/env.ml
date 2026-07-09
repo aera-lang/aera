@@ -1,7 +1,7 @@
 open Frontend.Token
 open Value
 
-let bind name value env =
+let bind name value env = (* similar to the define function in Crafting Interpreters *)
     match env with 
     | [] -> failwith "the environment should never be empty"
     | scope :: rest -> (StringMap.add name value scope) :: rest (* adds a binding to the CURRENT scope *)
