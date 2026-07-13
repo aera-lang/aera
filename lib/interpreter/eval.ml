@@ -29,7 +29,7 @@ and eval_let_stmt name typ expr env = (* for now, we are ignoring the typ annota
         (match env |> eval_expr expr' with
         | Error e -> Error e
         | Ok value -> 
-            Ok (env |> bind name value))
+            Ok (env |> bind name value)) (* return the UNIT type and env *)
 
 and eval_const_stmt name typ expr env = (* same as let statement *)
     match env |> eval_expr expr with
