@@ -1,6 +1,14 @@
 open Frontend
 open Value
 open Env
+open Lexer
+
+(* Helper Functions *)
+
+let get_identifier_name expr =
+    match expr with 
+    | Frontend.Ast.Identifier name -> Ok (name)
+    | _ -> Error ("error: expected identifier.")
 
 let rec eval_expr expr env =
     match expr with 
@@ -9,11 +17,18 @@ let rec eval_expr expr env =
     | Literal (LitChar c)                               -> Ok (VChar c)
     | Literal (LitString s)                             -> Ok (VString s)
     | Literal (LitBool b)                               -> Ok (VBool b)
-    | Grouping expr'                                    -> env |> eval_expr expr'
-    | Binary { lhs; op; rhs }                           -> env |> eval_binary lhs op rhs         
-    | Unary { op; rhs }                                 -> env |> eval_unary op rhs
     | Identifier name                                   -> env |> eval_identifier name
+    | Grouping expr'                                    -> env |> eval_expr expr'
+    (*| Call { callee; args }                             -> env |> eval_call callee args*)
+    | Binary { lhs; op; rhs }                           -> env |> eval_binary lhs op rhs  
+    | Assign { lhs; op; rhs }                           -> env |> eval_assign lhs op rhs       
+    | Unary { op; rhs }                                 -> env |> eval_unary op rhs
     | _ -> failwith "not implemented yet"
+
+and lvalue expr env = (* for now, an lvalue is an identifier, but field access and eventually array access are lvalues *)
+    match expr with 
+    | Frontend.Ast.Identifier name -> env |> eval_identifier name
+    | _ -> Error ("error: expected identifier as lvalue.")
 
 and eval_stmt stmt env =
     match stmt with 
@@ -37,6 +52,22 @@ and eval_const_stmt name typ expr env = (* same as let statement *)
     | Ok value -> 
         Ok (env |> bind name value)
 
+(* and eval_call callee args env = 
+    let callee' = env |> eval_expr callee in
+    let args' = env |> eval_call_helper args [] in 
+    (* somehow do something with this *)
+    (* need to call a function *)
+
+
+
+and eval_call_helper args eval_args env =
+    match args with 
+    | [] -> eval_args
+    | [ h ] -> env |> eval_expr h :: eval_args
+    | h :: t -> env |> eval_expr h :: env |> eval_call_helper args t *)
+
+
+(* Binary Functions *)
 and eval_binary lhs op rhs env =
     let l = env |> eval_expr lhs in 
     let r = env |> eval_expr rhs in 
@@ -116,6 +147,70 @@ and eval_binary_bool lhs op rhs =
     | Or        -> Ok (VBool (lhs || rhs))
     | _         -> Error ("error: invalid operation on a boolean value")
 
+
+(* Assign Functions*)
+and eval_assign lhs op rhs env =
+    let l = env |> lvalue lhs in 
+    let r = (match rhs with 
+    | Identifier _ -> env |> lvalue rhs
+    | _ -> env |> eval_expr rhs) in 
+    match l, r with 
+    | Ok (VInt a), Ok (VInt b)                          -> env |> eval_assign_unit lhs (eval_assign_int a op b) 
+    | Ok (VFloat a), Ok (VFloat b)                      -> env |> eval_assign_unit lhs (eval_assign_float a op b) 
+    | Ok (VString a), Ok (VString b)                    -> env |> eval_assign_unit lhs (eval_assign_string a op b) 
+    | _                                                 -> Error ("error: expected int, float or string literal")
+
+and eval_assign_int lhs op rhs =
+    match op with
+    | EqAssign      -> Ok(VInt(rhs)) (* reassign rhs value to lhs *)
+    | AddAssign     -> Ok (VInt (lhs + rhs))
+    | SubAssign     -> Ok (VInt (lhs - rhs))
+    | MulAssign     -> Ok (VInt (lhs * rhs))
+    | DivAssign     -> if rhs = 0 then Error ("error: division by zero is undefined")
+                       else
+                       Ok (VInt (lhs / rhs))
+    | ModAssign     -> if rhs = 0 then Error ("error: division by zero is undefined")
+                       else
+                       Ok (VInt (lhs mod rhs))     
+
+    | AndAssign    -> Ok (VInt (lhs land rhs))
+    | OrAssign     -> Ok (VInt (lhs lor rhs))
+    | XorAssign    -> Ok (VInt (lhs lxor rhs))
+    | ShlAssign     -> Ok (VInt (lhs lsl rhs))
+    | ShrAssign     -> Ok (VInt (lhs asr rhs))
+
+and eval_assign_float lhs op rhs =
+    match op with
+    | EqAssign      -> Ok(VFloat(rhs)) (* reassign rhs value to lhs *)
+    | AddAssign     -> Ok (VFloat (lhs +. rhs))
+    | SubAssign     -> Ok (VFloat (lhs -. rhs))
+    | MulAssign     -> Ok (VFloat (lhs *. rhs))
+    | DivAssign     -> if rhs = 0.0 then Error ("error: division by zero is undefined")
+                       else
+                       Ok (VFloat (lhs /. rhs))
+    | ModAssign     -> if rhs = 0.0 then Error ("error: division by zero is undefined")
+                       else
+                       Ok (VFloat (mod_float lhs rhs))     
+
+    | _         -> Error ("error: invalid operation on a floating point value")
+
+and eval_assign_string lhs op rhs =
+    match op with
+    | AddAssign  -> Ok (VString (lhs ^ rhs))
+    | _         -> Error ("error: invalid operation on a string value")
+
+and eval_assign_unit lhs res env =
+    match get_identifier_name lhs with 
+    | Error e -> Error e 
+    | Ok name -> 
+        begin
+            match res with 
+            | Error e -> Error e 
+            | Ok value -> let env' = env |> assign name value
+                in Ok (VUnit) (* value, env *)
+            end
+
+(* Unary Functions *)
 and eval_unary op rhs env = 
     let r = env |> eval_expr rhs in 
     match r with

@@ -21,7 +21,7 @@ type assign_op =
 (* Arithmetic *)
 | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign
 (* Bitwise *)
-| AndAssign | PipeAssign | CaretAssign | ShlAssign | ShrAssign
+| AndAssign | OrAssign | XorAssign | ShlAssign | ShrAssign
 
 (* Literals *)
 

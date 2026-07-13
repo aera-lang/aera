@@ -48,8 +48,8 @@ let format_assign_op op =
     | DivAssign         -> "/="
     | ModAssign         -> "%="
     | AndAssign         -> "&="
-    | PipeAssign        -> "|="
-    | CaretAssign       -> "^="
+    | OrAssign          -> "|="
+    | XorAssign         -> "^="
     | ShlAssign         -> "<<="
     | ShrAssign         -> ">>="
 

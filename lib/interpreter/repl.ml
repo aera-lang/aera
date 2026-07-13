@@ -26,6 +26,6 @@ let rec repl_loop env =
             env |> repl_loop
 
 let repl () =
-    let env = [StringMap.empty] in (* initialize environment  *)
+    let env = [StringMap.empty] in (* initialize environment *)
     repl_loop env 
 

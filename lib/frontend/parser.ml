@@ -51,7 +51,7 @@ let prefix_bp op =
 
 let assign_bp op = 
     match op with
-    | EqAssign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | AndAssign | PipeAssign | CaretAssign | ShlAssign | ShrAssign 
+    | EqAssign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | AndAssign | OrAssign | XorAssign | ShlAssign | ShrAssign 
     -> Some (2, 1) (* format = (left binding power, right binding power) *)
 
 let binary_bp op =
@@ -101,8 +101,8 @@ let get_assign_op tok_kind par =
     | SlashEqual            -> Some DivAssign
     | PercentEqual          -> Some ModAssign
     | AmpEqual              -> Some AndAssign
-    | PipeEqual             -> Some PipeAssign
-    | CaretEqual            -> Some CaretAssign
+    | PipeEqual             -> Some OrAssign
+    | CaretEqual            -> Some XorAssign
     | LessLessEqual         -> Some ShlAssign
     | GreaterGreaterEqual   -> Some ShrAssign
     | _                     -> None
