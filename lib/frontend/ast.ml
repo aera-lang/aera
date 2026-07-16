@@ -42,6 +42,7 @@ and item =
 | FnItem of fn_item
 | StructItem of struct_item
 | VariantItem of variant_item
+| ConstItem of const_item
 
 and fn_item = {
     name: string;
@@ -61,6 +62,12 @@ and variant_case = string * (string * string) list (* if the list is empty, the 
 and variant_item = {
     name: string;
     cases: variant_case list;
+}
+
+and const_item = {
+    name: string;
+    typ: string option;
+    expr: expr;
 }
 
 (* Expressions *)
@@ -89,15 +96,8 @@ and expr =
 
 and stmt = 
 | LetStmt           of let_stmt
-| ConstStmt         of const_stmt
 
 and let_stmt = { 
-    name: string;
-    typ: string option;
-    expr: expr option;
-}
-
-and const_stmt = {
     name: string;
     typ: string option;
     expr: expr;

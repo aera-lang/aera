@@ -301,38 +301,7 @@ and return_expr par =
     
 (* Statements *)
 
-and let_stmt par =
-    match expect_identifier par with (* advance to the next token *)
-    | Error e -> Error e
-    | Ok (name, par') -> 
-        begin
-            match (peek par').kind with (* type annotation is optional *)
-            | Colon ->  begin 
-                            match parse_type par' with
-                            | Error e -> Error e
-                            | Ok (typ, par'') -> begin 
-                                                    match (peek par'').kind with 
-                                                    | Equal -> begin
-                                                                let (_, par''') = next par'' in (* consume = token *)
-                                                                match expr par''' with 
-                                                                | Error e -> Error e
-                                                                | Ok (expr', par'''') -> 
-                                                                    Ok (LetStmt { name = name; typ = Some typ; expr = Some expr' }, par'''')
-                                                                end
-                                                    | _ -> Ok (LetStmt { name = name; typ = Some typ; expr = None }, par'')
-                                                end
-                        end
-            | Equal -> begin
-                            let (_, par'') = next par' in (* consume = token *)
-                            match expr par'' with 
-                            | Error e -> Error e
-                            | Ok (expr', par''') -> Ok (LetStmt { name = name; typ = None; expr = Some expr' }, par''')
-                        end
-            | _ -> Ok (LetStmt { name = name; typ = None; expr = None }, par')
-
-        end
-                        
-and const_stmt par = match expect_identifier par with (* advance to the next token *)
+and let_stmt par = match expect_identifier par with (* advance to the next token *)
     | Error e -> Error e
     | Ok (name, par') -> 
         let tok = (peek par') in 
@@ -349,7 +318,7 @@ and const_stmt par = match expect_identifier par with (* advance to the next tok
                                                                     match expr par''' with 
                                                                     | Error e -> Error e
                                                                     | Ok (expr', par'''') -> 
-                                                                        Ok (ConstStmt { name = name; typ = Some typ; expr = expr' }, par''')
+                                                                        Ok (LetStmt { name = name; typ = Some typ; expr = expr' }, par''')
                                                                     end
                                                         | _ -> Error ("expected expression after '='", tok', par'')
                                                     end
@@ -358,7 +327,7 @@ and const_stmt par = match expect_identifier par with (* advance to the next tok
                             let (_, par'') = next par' in (* consume = token *)
                             match expr par'' with 
                             | Error e -> Error e
-                            | Ok (expr', par''') -> Ok (ConstStmt { name = name; typ = None; expr = expr' }, par''')
+                            | Ok (expr', par''') -> Ok (LetStmt { name = name; typ = None; expr = expr' }, par''')
                         end
             | _ -> Error ("expected '=' for constant declaration", tok, par')
         end
@@ -369,9 +338,6 @@ and stmt par =
     | Let -> (match let_stmt par with
             | Error e -> Error e
             | Ok (let_stmt, par') -> Ok(let_stmt, par'))
-    | Const -> (match const_stmt par with
-            | Error e -> Error e
-            | Ok (const_stmt, par') -> Ok(const_stmt, par'))
     | _ -> Error ("expected a statement", tok, par)  (* this SHOULDN'T happen if we check for keywords before calling stmt -> 
                                                             if I forgot to add a stmt, then this error will remind me *)
 
@@ -589,6 +555,36 @@ and variant_item par =
                     end
                 | _ -> Error ("expected '{' after struct name", tok, par'))
 
+and const_item par = match expect_identifier par with (* advance to the next token *)
+    | Error e -> Error e
+    | Ok (name, par') -> 
+        let tok = (peek par') in 
+        begin 
+            match tok.kind with 
+            | Colon -> begin 
+                            match parse_type par' with
+                            | Error e -> Error e
+                            | Ok (typ, par'') -> let tok' = (peek par'') in
+                                                    begin 
+                                                        match tok'.kind with 
+                                                        | Equal -> begin
+                                                                    let (_, par''') = next par'' in (* consume = token *)
+                                                                    match expr par''' with 
+                                                                    | Error e -> Error e
+                                                                    | Ok (expr', par'''') -> 
+                                                                        Ok (ConstItem { name = name; typ = Some typ; expr = expr' }, par''')
+                                                                    end
+                                                        | _ -> Error ("expected expression after '='", tok', par'')
+                                                    end
+                        end
+            | Equal -> begin
+                            let (_, par'') = next par' in (* consume = token *)
+                            match expr par'' with 
+                            | Error e -> Error e
+                            | Ok (expr', par''') -> Ok (ConstItem { name = name; typ = None; expr = expr' }, par''')
+                        end
+            | _ -> Error ("expected '=' for constant item", tok, par')
+        end
 and item par = 
     let tok = peek par in
     match tok.kind with 
@@ -604,6 +600,10 @@ and item par =
                 (match par' |> variant_item with 
                 | Error e -> Error e
                 | Ok (variant_item, par'') -> Ok (variant_item, par''))
+    | Const -> let (_, par') = next par in 
+                (match par' |> const_item with 
+                | Error e -> Error e
+                | Ok (const_item, par'') -> Ok (const_item, par''))
     | _ -> Error ("expected an item", tok, par)  (* this SHOULDN'T happen if we check for keywords before calling item -> 
                                                             if I forgot to add a item, then this error will remind me *)
 
@@ -615,7 +615,7 @@ let rec parse_helper items par =
     else
         let tok = peek par in 
         match tok.kind with
-        | Fn | Struct | Variant -> (match par |> item with (* ensures that in item, we CANNOT reach wildcard case *)
+        | Fn | Struct | Variant | Const -> (match par |> item with (* ensures that in item, we CANNOT reach wildcard case *)
                 | Error (msg, tok', par') -> (items, { par' with reporter = add_error tok'.pos msg par'.reporter }) (* needs better error handling *)
                 | Ok (item, par') -> par' |> parse_helper (item :: items))
         | _ -> (items, { par with reporter = add_error tok.pos "expected an item: fn, struct, variant" par.reporter }) 
@@ -629,10 +629,10 @@ let parse par =
 let parse_repl par = 
     let tok = peek par in 
     match tok.kind with 
-    | Fn | Struct | Variant -> (match par |> item with 
+    | Fn | Struct | Variant | Const -> (match par |> item with 
                                 | Error (msg, _, _) -> Error msg
                                 | Ok (item, _) -> Ok (ReplItem item))
-    | Let | Const -> (match par |> stmt with 
+    | Let  -> (match par |> stmt with 
                     | Error (msg, _, _) -> Error msg
                     | Ok (stmt, _) -> Ok (ReplStmt stmt))
     | _ -> (match par |> expr with 

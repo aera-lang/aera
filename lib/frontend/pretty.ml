@@ -163,7 +163,6 @@ and format_return expr_opt prefix is_last =
 and format_stmt prefix is_last stmt  = 
     match stmt with 
     | LetStmt { name; typ; expr }           -> format_let name typ expr prefix is_last
-    | ConstStmt { name; typ; expr }         -> format_const name typ expr prefix is_last
 
 and format_let name typ expr prefix is_last =
     let let_lst = [ Printf.sprintf "%s%s Let" prefix (connector is_last) ] in 
@@ -171,25 +170,15 @@ and format_let name typ expr prefix is_last =
     let typ_lst = (match typ with 
                 | Some typ' -> [ Printf.sprintf "%s%s type = %s" (child_prefix prefix is_last) (connector false) typ' ]
                 | None -> [ Printf.sprintf "%s%s type = inferred" (child_prefix prefix is_last) (connector false) ]) in
-    let expr_lst = (match expr with 
-                | Some expr' -> expr' |> format_expr (child_prefix prefix is_last) true
-                | None -> []) in
-    let_lst @ name_lst @ typ_lst @ expr_lst
-    
-and format_const name typ expr prefix is_last =
-    let const_lst = [ Printf.sprintf "%s%s Const" prefix (connector is_last) ] in 
-    let name_lst = [ Printf.sprintf "%s%s name = %s" (child_prefix prefix is_last) (connector false) name ] in (* concat name to lst *)
-    let typ_lst = (match typ with 
-                | Some typ' -> [ Printf.sprintf "%s%s type = %s" (child_prefix prefix is_last) (connector false) typ' ]
-                | None -> [ Printf.sprintf "%s%s type = inferred" (child_prefix prefix is_last) (connector false) ]) in
     let expr_lst = expr |> format_expr (child_prefix prefix is_last) true in
-    const_lst @ name_lst @ typ_lst @ expr_lst
+    let_lst @ name_lst @ typ_lst @ expr_lst
     
 and format_item prefix is_last item = 
     match item with 
     | FnItem { name; params; return_type; body }    -> format_fn name params return_type body prefix is_last
     | StructItem { name; fields }                   -> format_struct name fields prefix is_last
     | VariantItem { name; cases }                   -> format_variant name cases prefix is_last
+    | ConstItem { name; typ; expr }                 -> format_const name typ expr prefix is_last
 
  and format_fn name params return_type body prefix is_last =
     let fn_lst = [ Printf.sprintf "%s%s FnItem" prefix (connector is_last) ] in
@@ -260,6 +249,16 @@ and format_variant_case_helper fields prefix =
     | [ (name, typ) ] -> [ Printf.sprintf "%s%s Field { name = \"%s\", type = \"%s\" }" prefix (connector true) name typ ]
     | (name, typ) :: t -> [ Printf.sprintf "%s%s Field { name = \"%s\", type = \"%s\" }" prefix (connector false) name typ ] 
                             @ format_variant_case_helper t prefix
+
+and format_const name typ expr prefix is_last =
+    let const_lst = [ Printf.sprintf "%s%s Const" prefix (connector is_last) ] in 
+    let name_lst = [ Printf.sprintf "%s%s name = %s" (child_prefix prefix is_last) (connector false) name ] in (* concat name to lst *)
+    let typ_lst = (match typ with 
+                | Some typ' -> [ Printf.sprintf "%s%s type = %s" (child_prefix prefix is_last) (connector false) typ' ]
+                | None -> [ Printf.sprintf "%s%s type = inferred" (child_prefix prefix is_last) (connector false) ]) in
+    let expr_lst = expr |> format_expr (child_prefix prefix is_last) true in
+    const_lst @ name_lst @ typ_lst @ expr_lst
+    
 and format_program items = 
     let program_lst = [ "Program" ] in
     let items_lst = format_program_helper items "" in 

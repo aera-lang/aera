@@ -10,7 +10,7 @@ let get_identifier_name expr =
     | Frontend.Ast.Identifier name -> Ok (name)
     | _ -> Error ("error: expected identifier.")
 
-(* Eval Functions *)
+(* Expression Functions *)
 
 let rec eval_expr expr env =
     match expr with 
@@ -25,46 +25,47 @@ let rec eval_expr expr env =
     | Binary { lhs; op; rhs }                           -> env |> eval_binary lhs op rhs  
     | Assign { lhs; op; rhs }                           -> env |> eval_assign lhs op rhs       
     | Unary { op; rhs }                                 -> env |> eval_unary op rhs
-    | Block { stmts; expr }                                   -> env |> eval_block stmts expr
+    | Block { stmts; expr }                             -> env |> eval_block stmts expr
     | _ -> failwith "not implemented yet"
 
 and eval_block stmts expr env =
     let env' = enter_scope env in 
-    (* somehow get the statements *)
-    let expr' = env' |> eval_expr expr in 
-    let env'' = leave_scope env' in
-    (* then return the expr' value and the env'' *)
-    Ok (expr', env'') (* not fully correct but that's the structure *)
-
+    match env' |> eval_block_helper stmts with (* handles binding *)
+    | Error e -> Error e
+    | Ok (_, env'') -> 
+        begin
+            match env'' |> eval_expr expr with
+            | Error e -> Error e
+            | Ok (value, _) -> 
+                let env''' = leave_scope env'' in
+                Ok(value, env''')
+        end
+   
 and eval_block_helper stmts env =
     match stmts with
-    | [] -> ?
+    | [] -> Ok (VUnit, env)
     | [ stmt ] -> env |> eval_stmt stmt
-    | stmt :: rest -> env |> eval_stmt stmt in 
-                    env |> eval_block_helper rest 
+    | stmt :: rest -> 
+            begin 
+                match env |> eval_stmt stmt with 
+                | Error e -> Error e 
+                | Ok (_, env') -> env' |> eval_block_helper rest
+            end
 
 and lvalue expr env = (* for now, an lvalue is an identifier, but field access and eventually array access are lvalues *)
     match expr with 
     | Frontend.Ast.Identifier name -> env |> eval_identifier name
     | _ -> Error ("error: expected identifier as lvalue.")
 
+(* Statement Functions *)
+
 and eval_stmt stmt env =
     match stmt with 
-    | Frontend.Ast.LetStmt { name; typ; expr; } -> env |> eval_let_stmt name typ expr
-    | ConstStmt { name; typ; expr; } -> env |> eval_const_stmt name typ expr
+    | Frontend.Ast.LetStmt { name; typ; expr; } -> env |> eval_let name typ expr
 
-and eval_let_stmt name typ expr env = (* for now, we are ignoring the typ annotation 
+and eval_let name typ expr env = (* for now, we are ignoring the typ annotation 
                                         because we haven't implemented a type checker,
                                         and it adds unecessary complexitiy *)
-    match expr with 
-    | None -> Error("idk")
-    | Some expr' -> 
-        (match env |> eval_expr expr' with
-        | Error e -> Error e
-        | Ok (value, _) -> 
-            Ok (VUnit, env |> bind name value)) (* return the UNIT type and env *)
-
-and eval_const_stmt name typ expr env = (* same as let statement *)
     match env |> eval_expr expr with
     | Error e -> Error e
     | Ok (value, _) -> 
@@ -259,3 +260,34 @@ and eval_unary_bool op rhs env =
     match op with 
     | Not -> Ok (VBool (not rhs), env)
     | _ -> Error ("error: invalid unary operation on a floating point value")
+
+(* Item Functions *)
+
+and eval_const name typ expr env = (* similar to let statement *)
+    match env |> eval_expr expr with
+    | Error e -> Error e
+    | Ok (value, _) -> 
+        Ok (VUnit, env |> bind name value)
+
+and eval_item item env =
+    match item with 
+    | Frontend.Ast.ConstItem {name; typ; expr }         -> env |> eval_const name typ expr
+    | _ -> failwith "not implemented yet"
+
+(* Eval Function *)
+
+let rec eval items env = 
+    match items with 
+    | [] -> failwith "the program cannot be empty."
+    | [ item ] -> 
+            begin
+                match env |> eval_item item with 
+                | Error e -> Error e
+                | Ok (value, env') -> Ok (value, env')
+            end
+    | item :: rest -> 
+        begin
+            match env |> eval_item item with 
+            | Error e -> Error e
+            | Ok (_, env') -> env' |> eval rest
+        end
