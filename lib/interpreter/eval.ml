@@ -26,7 +26,54 @@ let rec eval_expr expr env =
     | Assign { lhs; op; rhs }                           -> env |> eval_assign lhs op rhs       
     | Unary { op; rhs }                                 -> env |> eval_unary op rhs
     | Block { stmts; expr }                             -> env |> eval_block stmts expr
+    | InfiniteLoop expr'                                -> env |> eval_infinite_loop expr
+    | WhileLoop { cond; body }                          -> env |> eval_while_loop cond body
+    | IfExpr { cond; then_branch; else_branch }         -> env |> eval_if cond then_branch else_branch
+    | BreakExpr expr'                                   -> env |> eval_break expr'    
+    | ReturnExpr expr'                                  -> env |> eval_return expr'                                                      
     | _ -> failwith "not implemented yet"
+
+
+(* | InfiniteLoop      of expr
+| WhileLoop         of { cond: expr; body: expr }
+| IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
+| BreakExpr         of expr option
+| ReturnExpr        of expr option*)
+
+and eval_infinite_loop expr env = 
+    match expr with 
+    | Block { stmts; expr } -> 
+        begin 
+            match env |> eval_block stmts expr with
+            | Error e -> Error e 
+            | Ok (value, env') -> Ok(value, env') 
+        end
+
+    | _ -> Error ("error: expected block expression")
+
+and eval_while_loop cond body env = ()
+
+and eval_if cond then_branch else_branch = ()
+
+and eval_break expr env =
+    match expr with 
+    | None -> Ok (VUnit, env)
+    | Some expr' ->
+        begin 
+            match env |> eval_expr expr' with 
+            | Error e -> Error e
+            | Ok (value, _) -> Ok (value, env)
+        end
+
+and eval_return expr env =
+    match expr with 
+    | None -> Ok (VUnit, env)
+    | Some expr' ->
+        begin 
+            match env |> eval_expr expr' with 
+            | Error e -> Error e
+            | Ok (value, _) -> Ok (value, env)
+        end
 
 and eval_block stmts expr env =
     let env' = enter_scope env in 
