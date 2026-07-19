@@ -33,27 +33,72 @@ let rec eval_expr expr env =
     | ReturnExpr expr'                                  -> env |> eval_return expr'                                                      
     | _ -> failwith "not implemented yet"
 
-
-(* | InfiniteLoop      of expr
-| WhileLoop         of { cond: expr; body: expr }
-| IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
-| BreakExpr         of expr option
-| ReturnExpr        of expr option*)
-
-and eval_infinite_loop expr env = 
+and eval_infinite_loop expr env = (* DOESN'T SUPPORT BREAK YET, DON'T WANNA HAVE TO DEAL WITH IT RN 
+                                    -> will have to propagate break and eventually return from eval_expr to
+                                    eval_stmt to eval_block_helper to eval_block to eval_if / eval_while / eval_for and eval_fn
+                                    -> a lot of work that I don't want to deal with rn *)             
     match expr with 
     | Block { stmts; expr } -> 
         begin 
             match env |> eval_block stmts expr with
             | Error e -> Error e 
-            | Ok (value, env') -> Ok(value, env') 
+            | Ok (_, env') -> env' |> eval_infinite_loop expr
         end
-
     | _ -> Error ("error: expected block expression")
 
-and eval_while_loop cond body env = ()
+and eval_while_loop cond body env =
+    match env |> eval_expr cond with 
+    | Error e -> Error e
+    | Ok (VBool false, _) -> Ok (VUnit, env)
+    | Ok (VBool true, _) ->
+        begin 
+            match body with 
+            | Block { stmts; expr } ->
+                begin 
+                    match env |> eval_block stmts expr with 
+                    | Error e -> Error e
+                    | Ok (_, env') -> env' |> eval_while_loop cond body
+                    end
+            | _ -> Error ("error: expected block expression")
+        end
+    | Ok (_, _) -> Error ("error: condition must evaluate to a boolean value")
 
-and eval_if cond then_branch else_branch = ()
+and eval_if cond then_branch else_branch env = 
+    match env |> eval_expr cond with 
+    | Error e -> Error e
+    | Ok (VBool true, _) ->
+        begin 
+            match then_branch with 
+            | Block { stmts; expr } ->
+                begin 
+                    match env |> eval_block stmts expr with 
+                    | Error e -> Error e
+                    | Ok (value, env') -> Ok (value, env') 
+                    end
+            | _ -> Error ("error: expected block expression")
+        end
+    | Ok (VBool false, _) -> 
+        begin 
+            match else_branch with 
+            | None -> Ok (VUnit, env)
+            | Some body -> 
+                begin
+                    match env |> eval_else body with 
+                    | Error e -> Error e
+                    | Ok (value, env') -> Ok (value, env')
+                end
+        end
+    | Ok (_, _) -> Error ("error: condition must evaluate to a boolean value")
+              
+and eval_else body env =
+    match body with 
+    | Block { stmts; expr } ->
+        begin 
+            match env |> eval_block stmts expr with 
+            | Error e -> Error e
+            | Ok (value, env') -> Ok (value, env') 
+        end
+    | _ -> Error ("error: expected block expression")
 
 and eval_break expr env =
     match expr with 
