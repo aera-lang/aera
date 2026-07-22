@@ -21,7 +21,7 @@ let rec eval_expr expr env =
     | Literal (LitBool b)                               -> Ok (VBool b, env)
     | Identifier name                                   -> env |> eval_identifier name
     | Grouping expr'                                    -> env |> eval_expr expr'
-    (*| Call { callee; args }                             -> env |> eval_call callee args*)
+    | Call { callee; args }                             -> env |> eval_call callee args
     | Binary { lhs; op; rhs }                           -> env |> eval_binary lhs op rhs  
     | Assign { lhs; op; rhs }                           -> env |> eval_assign lhs op rhs       
     | Unary { op; rhs }                                 -> env |> eval_unary op rhs
@@ -31,7 +31,6 @@ let rec eval_expr expr env =
     | IfExpr { cond; then_branch; else_branch }         -> env |> eval_if cond then_branch else_branch
     | BreakExpr expr'                                   -> env |> eval_break expr'    
     | ReturnExpr expr'                                  -> env |> eval_return expr'                                                      
-    | _ -> failwith "not implemented yet"
 
 and eval_infinite_loop expr env = (* DOESN'T SUPPORT BREAK YET, DON'T WANNA HAVE TO DEAL WITH IT RN 
                                     -> will have to propagate break and eventually return from eval_expr to
@@ -128,9 +127,7 @@ and eval_block stmts expr env =
         begin
             match env'' |> eval_expr expr with
             | Error e -> Error e
-            | Ok (value, _) -> 
-                let env''' = leave_scope env'' in
-                Ok(value, env''')
+            | Ok (value, _) -> Ok(value, env) (* restores state to BEFORE the block expression *)
         end
    
 and eval_block_helper stmts env =
@@ -163,27 +160,64 @@ and eval_let name typ expr env = (* for now, we are ignoring the typ annotation
     | Ok (value, _) -> 
         Ok (VUnit, env |> bind name value)
 
-(* and eval_call callee args env = 
-    let callee' = env |> eval_expr callee in
-    let args' = env |> eval_call_helper args [] in 
-    (* somehow do something with this *)
-    (* need to call a function *)
+and eval_call callee args env = 
+    match env |> eval_expr callee with 
+    | Error e -> Error e
+    | Ok (callee', _) ->
+        begin 
+            match callee' with 
+            | VFunction (params, body, closure_env) -> 
+                if List.length params <> List.length args then
+                    Error ("error: arity mismatch")
+                else
+                    begin
+                        match env |> eval_call_helper args [] with 
+                        | Error e -> Error e
+                        | Ok (values, _) ->
+                            let fn_env = enter_scope closure_env in 
+                            let fn_env' = fn_env |> bind_params params values in
+                            begin
+                                match body with 
+                                | Block { stmts; expr } -> 
+                                    begin 
+                                        match fn_env' |> eval_block stmts expr with
+                                        | Error e -> Error e 
+                                        | Ok (value, _) -> Ok (value, env) (* return value can be a Unit *)
+                                    end
+                                | _ -> Error ("error: expected block expression")    
+                            end
+                    end
 
-
+            | _ -> Error ("error: not a callable function")
+            end
+      
+and bind_params params values env =
+    match params, values with 
+    | [], [] -> env
+    | (name, _) :: rest, value :: rest' -> (* ignoring type annotations rn *)
+        let env' = env |> bind name value 
+        in env' |> bind_params rest rest'
+    | _ -> failwith "both lists must be the same size and are checked beforehand"
 
 and eval_call_helper args eval_args env =
     match args with 
-    | [] -> eval_args
-    | [ h ] -> env |> eval_expr h :: eval_args
-    | h :: t -> env |> eval_expr h :: env |> eval_call_helper args t *)
+    | [] -> Ok (List.rev eval_args, env)
+    | h :: t -> 
+        begin 
+            match env |> eval_expr h with 
+            | Error e -> Error e
+            | Ok (value, _) -> env |> eval_call_helper t (value :: eval_args)
+        end
 
 (* Identifier Function *)
+
 and eval_identifier name env =
     match env |> find name with 
     | None -> Error ("error: variable not bound to a value")
     | Some value -> Ok (value, env)
 
 (* Binary Functions *)
+
 and eval_binary lhs op rhs env =
     let l = env |> eval_expr lhs in 
     let r = env |> eval_expr rhs in 
@@ -359,11 +393,15 @@ and eval_const name typ expr env = (* similar to let statement *)
     match env |> eval_expr expr with
     | Error e -> Error e
     | Ok (value, _) -> 
-        Ok (VUnit, env |> bind name value)
+        Ok (VUnit, env |> bind name value)  
+
+and eval_fn name params return_type body env = (* note return type is a TYPE ANNOTATION, will handle it later *)
+    let value = VFunction (params, body, env) in
+    Ok (value, env |> bind name value) (* currently Result type *)
 
 and eval_item item env =
     match item with 
-    | Frontend.Ast.ConstItem {name; typ; expr }         -> env |> eval_const name typ expr
+    | Frontend.Ast.ConstItem { name; typ; expr }         -> env |> eval_const name typ expr
     | _ -> failwith "not implemented yet"
 
 (* Eval Function *)

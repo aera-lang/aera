@@ -25,7 +25,7 @@ let rec find name env = (* similar to GET *)
 
 
 let enter_scope env = 
-     match env with 
+    match env with 
     | [] -> failwith "the environment should never be empty"
     | scope :: rest -> StringMap.empty :: rest (* creates an empty scope *)
 
