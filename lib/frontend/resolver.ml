@@ -1,3 +1,7 @@
+(*
+
+RESOLVER IS GONNA HAVE TO BE DIFFERENT
+
 open Token 
 
 module StringMap = Map.Make(String)
@@ -20,7 +24,6 @@ module Stack = struct
                 | [] -> true
                 | _ -> false
 end
-
 
 let begin_scope scopes = 
     Stack.push StringMap.empty scopes 
@@ -50,9 +53,39 @@ let define name scopes =
         | None -> scopes (* idk if this is right *)
         | Some scope -> Stack.push (StringMap.add name false scope) scopes
 
-let resolve_expr = () (* follow structure of eval_expr *)
-let resolve_stmt = () (* follow structure of eval_stmt *)
+let resolve_expr expr scopes = ()
 
-let resolve_item = () (* follow structure of eval_item *)
+and resolve_stmt stmt scopes =
+    match stmt with 
+    | Ast.LetStmt { name; typ; expr; } -> scopes |> resolve_let name typ expr
 
-let resolve = () (* follow structure of eval *)
+and resolve_let name typ expr env = (* for now, we are ignoring the typ annotation 
+                                        because we haven't implemented a type checker,
+                                        and it adds unecessary complexitiy *)
+    match env |> eval_expr expr with
+    | Error e -> Error e
+    | Ok (value, _) -> 
+        Ok (VUnit, env |> bind name value)
+
+and resolve_item item scopes =
+    match item with 
+    | Ast.ConstItem { name; typ; expr }                 -> scopes |> resolve_const name typ expr
+    | FnItem { name; params; return_type; body }        -> scopes |> resolve_fn name params return_type body
+    | _ -> failwith "not implemented yet"
+
+let rec resolve items scopes = 
+    match items with 
+    | [] -> failwith "the program cannot be empty."
+    | [ item ] -> 
+            begin
+                match scopes |> resolve_item item with 
+                | Error e -> Error e
+                | Ok (value, scopes') -> Ok (value, scopes')
+            end
+    | item :: rest -> 
+        begin
+            match scopes |> resolve_item item with 
+            | Error e -> Error e
+            | Ok (_, scopes') -> scopes' |> resolve rest
+        end
+ *)

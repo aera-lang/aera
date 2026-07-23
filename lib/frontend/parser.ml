@@ -418,7 +418,7 @@ and fn_item par =
                 | Error e -> Error e
                 | Ok (params, par') -> 
                     begin
-                        match (peek par').kind with
+                        match (peek par').kind with (* THIS SHOULD BE OPTIONAL!!! *)
                         | MinusGreater -> (match parse_return_type par' with
                                            | Error e -> Error e
                                            | Ok (typ, par'') -> 

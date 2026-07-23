@@ -23,7 +23,30 @@ let rec find name env = (* similar to GET *)
                     | Some value -> Some value
                     | None -> find name rest)
 
+let ancestor d env = 
+    List.nth_opt env d
 
+let find_at d name env =
+    match env |> ancestor d with 
+    | None -> None 
+    | Some scope -> (match StringMap.find_opt name scope with 
+                    | None -> None 
+                    | Some value -> Some value)
+
+                    
+let rec assign_at d name value env =
+    match env |> ancestor d with 
+    | None -> None 
+    | Some scope -> (match StringMap.find_opt name scope with 
+                    | None -> None 
+                    | Some value' -> Some value)
+
+                    (* a little tricky
+                    Some ( (StringMap.add name value scope) :: rest) 
+                    but we can't just car it to the beginning of the list
+                    -> has to be similar structure to assign
+                    *)
+                    
 let enter_scope env = 
     match env with 
     | [] -> failwith "the environment should never be empty"

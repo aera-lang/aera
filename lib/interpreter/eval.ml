@@ -8,7 +8,7 @@ open Lexer
 let get_identifier_name expr =
     match expr with 
     | Frontend.Ast.Identifier name -> Ok (name)
-    | _ -> Error ("error: expected identifier.")
+    | _ -> Error ("error: expected identifier")
 
 (* Expression Functions *)
 
@@ -144,7 +144,7 @@ and eval_block_helper stmts env =
 and lvalue expr env = (* for now, an lvalue is an identifier, but field access and eventually array access are lvalues *)
     match expr with 
     | Frontend.Ast.Identifier name -> env |> eval_identifier name
-    | _ -> Error ("error: expected identifier as lvalue.")
+    | _ -> Error ("error: expected identifier as lvalue")
 
 (* Statement Functions *)
 
@@ -166,7 +166,29 @@ and eval_call callee args env =
     | Ok (callee', _) ->
         begin 
             match callee' with 
-            | VFunction (params, body, closure_env) -> 
+            | VFunction (params, body, closure_env, Some name) -> 
+                if List.length params <> List.length args then
+                    Error ("error: arity mismatch")
+                else
+                    begin
+                        match env |> eval_call_helper args [] with 
+                        | Error e -> Error e
+                        | Ok (values, _) ->
+                            let fn_env = enter_scope closure_env in 
+                            let fn_env = bind name callee' fn_env in
+                            let fn_env' = fn_env |> bind_params params values in
+                            begin
+                                match body with 
+                                | Block { stmts; expr } -> 
+                                    begin 
+                                        match fn_env' |> eval_block stmts expr with
+                                        | Error e -> Error e 
+                                        | Ok (value, _) -> Ok (value, env) (* return value can be a Unit *)
+                                    end
+                                | _ -> Error ("error: expected block expression")    
+                            end
+                    end
+            | VFunction (params, body, closure_env, None) -> (* anonymous function -> don't have the syntax yet *)
                 if List.length params <> List.length args then
                     Error ("error: arity mismatch")
                 else
@@ -187,7 +209,6 @@ and eval_call callee args env =
                                 | _ -> Error ("error: expected block expression")    
                             end
                     end
-
             | _ -> Error ("error: not a callable function")
             end
       
@@ -396,19 +417,20 @@ and eval_const name typ expr env = (* similar to let statement *)
         Ok (VUnit, env |> bind name value)  
 
 and eval_fn name params return_type body env = (* note return type is a TYPE ANNOTATION, will handle it later *)
-    let value = VFunction (params, body, env) in
+    let value = VFunction (params, body, env, Some name) in
     Ok (value, env |> bind name value) (* currently Result type *)
 
 and eval_item item env =
     match item with 
     | Frontend.Ast.ConstItem { name; typ; expr }         -> env |> eval_const name typ expr
+    | FnItem { name; params; return_type; body }         -> env |> eval_fn name params return_type body
     | _ -> failwith "not implemented yet"
 
 (* Eval Function *)
 
 let rec eval items env = 
     match items with 
-    | [] -> failwith "the program cannot be empty."
+    | [] -> Ok (VUnit, env)
     | [ item ] -> 
             begin
                 match env |> eval_item item with 
