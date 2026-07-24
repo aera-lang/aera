@@ -2,11 +2,11 @@ open Span
 
 type token_kind = 
 (* Literals *)
-| Identifier of string
-| IntLiteral of int
-| FloatLiteral of float
-| CharLiteral of char
-| StringLiteral of string
+| Identifier
+| IntLiteral
+| FloatLiteral
+| CharLiteral
+| StringLiteral
 | Unit (* the unit type *)
 (* Bool Keywords*)
 | True
