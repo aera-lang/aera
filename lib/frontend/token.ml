@@ -1,17 +1,23 @@
-open Position
+open Span
 
 type token_kind = 
+(* Literals *)
 | Identifier of string
 | IntLiteral of int
 | FloatLiteral of float
 | CharLiteral of char
 | StringLiteral of string
+| Unit (* the unit type *)
+(* Bool Keywords*)
 | True
 | False
+(* Function / Statement Keywords *)
 | Fn
 | Let
 | Mut
 | Const
+| Return
+(* If / Loop / Match Keywords *)
 | If
 | Else
 | For
@@ -19,13 +25,15 @@ type token_kind =
 | Loop
 | Match
 | Break
-| Continue
-| Return
+(* User Type Keywords *)
 | Struct
 | Variant
-| In
-| As
-| Unit
+| Module
+| Use
+(* Other Keywords *)
+| In (* e.g., let x = 5 in x * x -> parses to let <name> = <expr> [ in <expr> *)
+| As (* safe casting *)
+(* Punctuation *)
 | LeftParen
 | RightParen
 | LeftBrace
@@ -73,13 +81,15 @@ type token_kind =
 | Less
 | Greater
 | Equal
+(* Comments *)
 | LineComment  (* # *)
 | BlockComment (* <# ... #>*)
+(* Error *)
 | Illegal
+(* End Token *)
 | EOF
 
 type token = {
     kind: token_kind;
-    lexeme: string;
-    pos: position;
+    span: span;
 }
