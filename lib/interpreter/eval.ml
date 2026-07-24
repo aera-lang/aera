@@ -160,7 +160,7 @@ and eval_let name typ expr env = (* for now, we are ignoring the typ annotation
     | Ok (value, _) -> 
         Ok (VUnit, env |> bind name value)
 
-and eval_call callee args env = 
+and eval_call callee args env = (* NOT WORKING *)
     match env |> eval_expr callee with 
     | Error e -> Error e
     | Ok (callee', _) ->
@@ -243,11 +243,14 @@ and eval_binary lhs op rhs env =
     let l = env |> eval_expr lhs in 
     let r = env |> eval_expr rhs in 
     match l, r with
+    
     | Ok (VInt a, _), Ok (VInt b, _)                          -> env |> eval_binary_int a op b
     | Ok (VFloat a, _), Ok (VFloat b, _)                      -> env |> eval_binary_float a op b
     | Ok (VChar a, _), Ok (VChar b, _)                        -> env |> eval_binary_char a op b
     | Ok (VString a, _), Ok (VString b, _)                    -> env |> eval_binary_string a op b
     | Ok (VBool a, _), Ok (VBool b, _)                        -> env |> eval_binary_bool a op b
+    | Error e, _ -> Error e
+    | _, Error e -> Error e
     | _                                                 -> Error ("error: expected int, float, char, string or bool literal")
 
 and eval_binary_int lhs op rhs env =
@@ -329,6 +332,8 @@ and eval_assign lhs op rhs env =
     | Ok (VInt a, _), Ok (VInt b, _)                          -> env |> eval_assign_unit lhs (eval_assign_int a op b) 
     | Ok (VFloat a, _), Ok (VFloat b, _)                      -> env |> eval_assign_unit lhs (eval_assign_float a op b) 
     | Ok (VString a, _), Ok (VString b, _)                    -> env |> eval_assign_unit lhs (eval_assign_string a op b) 
+    | Error e, _ -> Error e
+    | _, Error e -> Error e
     | _                                                       -> Error ("error: expected int, float or string literal")
 
 and eval_assign_int lhs op rhs =

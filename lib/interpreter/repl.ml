@@ -32,8 +32,9 @@ let rec repl_loop env =
     print_string "~> ";
     flush stdout;
     match input_line stdin with 
-    | exception End_of_file -> print_endline "thanks for using aera!"
+    | exception End_of_file -> print_endline "\nthanks for using aera!"
     | "quit" -> print_endline "thanks for using aera!"
+    | "" -> env |> repl_loop
     | line -> 
             let lex = Lexer.read_tokens (Lexer.init line) in
             let res = Parser.parse_repl (Parser.init lex.tokens lex.reporter) in
@@ -48,6 +49,6 @@ let rec repl_loop env =
             env |> repl_loop
 
 let repl () =
-    let env = [StringMap.empty] in (* initialize environment *)
-    repl_loop env 
-
+    Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ ->
+    exit 0));
+    [StringMap.empty] |> repl_loop (* initialize empty environment *)

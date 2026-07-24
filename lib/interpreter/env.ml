@@ -46,11 +46,9 @@ let rec assign_at d name value env =
                     but we can't just car it to the beginning of the list
                     -> has to be similar structure to assign
                     *)
-                    
+
 let enter_scope env = 
-    match env with 
-    | [] -> failwith "the environment should never be empty"
-    | scope :: rest -> StringMap.empty :: rest (* creates an empty scope *)
+    StringMap.empty :: env
 
 let leave_scope env =
     match env with 

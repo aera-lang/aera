@@ -61,12 +61,10 @@ let binary_bp op =
     | BitOr -> Some (7, 8)
     | BitXor -> Some (9, 10)
     | BitAnd -> Some (11, 12)
-    | Lt | Lte | Gt | Gte -> Some (13, 14)
+    | Eq | Neq | Lt | Lte | Gt | Gte -> Some (13, 14)
     | Shl | Shr -> Some (15, 16)
     | Add | Sub -> Some (17, 18)
     | Mul | Div | Mod -> Some (19, 20)
-    | _ -> None
-
 
 let get_binary_op tok_kind par =
     match tok_kind with
@@ -77,6 +75,8 @@ let get_binary_op tok_kind par =
     | Slash             -> Some Div
     | Percent           -> Some Mod
     (* Comparison *)
+    | EqualEqual        -> Some Eq
+    | ExclaimEqual      -> Some Neq
     | Less              -> Some Lt
     | LessEqual         -> Some Lte
     | Greater           -> Some Gt
@@ -146,7 +146,7 @@ let rec expr_bp min_bp par =
                                     | Error e -> Error e
                                     | Ok (rhs', par'') -> Ok (Unary ({op = Not; rhs = rhs'}), par''))
     (* Grouped Expression *)
-    | LeftParen             -> (match par' |> expr_bp min_bp with 
+    | LeftParen             -> (match par' |> expr_bp 0 with 
                                     | Error e -> Error e
                                     | Ok (expr, par'') -> 
                                         let tok = peek par'' in 
