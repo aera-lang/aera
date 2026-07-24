@@ -12,7 +12,7 @@ let () =
         else
             Interpreter.Run.interpret path
     | [| _ |] -> 
-        print_endline "Welcome to Aera 0.1.0\nType 'quit' to exit.\n";
+        print_endline "Welcome to Aera 0.0.1\nType 'quit' to exit.\n";
         Interpreter.Repl.repl ()
     | _ -> print_endline "error: expected file name with .aera extension. usage: aera <file>"
 
