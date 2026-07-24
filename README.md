@@ -33,7 +33,7 @@ unit
 
 Aera is ***VERY*** early! 
 
-This is a first, barebones snapshot (`v0.0.1`), not a stable release. The REPL supports function declarations, `let`/`const` bindings, arithmetic and logical expressions, `if`/`while`/`loop`, and function calls.
+This is a first, barebones snapshot (`0.0.1`), not a stable release. The REPL supports function declarations, `let`/`const` bindings, arithmetic and logical expressions, `if`/`while`/`loop`, and function calls.
 
 ## Limitations
 
