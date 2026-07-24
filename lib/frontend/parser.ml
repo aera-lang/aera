@@ -335,9 +335,10 @@ and let_stmt par = match expect_identifier par with (* advance to the next token
 and stmt par = 
     let tok = peek par in 
     match tok.kind with
-    | Let -> (match let_stmt par with
+    | Let -> let (_, par') = next par in 
+            (match let_stmt par' with
             | Error e -> Error e
-            | Ok (let_stmt, par') -> Ok(let_stmt, par'))
+            | Ok (let_stmt, par'') -> Ok(let_stmt, par''))
     | _ -> Error ("expected a statement", tok, par)  (* this SHOULDN'T happen if we check for keywords before calling stmt -> 
                                                             if I forgot to add a stmt, then this error will remind me *)
 
@@ -418,16 +419,16 @@ and fn_item par =
                 | Error e -> Error e
                 | Ok (params, par') -> 
                     begin
-                        match (peek par').kind with (* THIS SHOULD BE OPTIONAL!!! *)
+                        match (peek par').kind with
                         | MinusGreater -> (match parse_return_type par' with
                                            | Error e -> Error e
                                            | Ok (typ, par'') -> 
                                                 (match block par'' with 
                                                 | Error e -> Error e
                                                 | Ok (body, par''') -> Ok (FnItem {name = name; params = params; return_type = Some typ; body = body} ,par''')))             
-                                        | _ -> (match block par' with 
-                                            | Error e -> Error e
-                                            | Ok (body, par'') -> Ok (FnItem {name = name; params = params; return_type = None; body = body} ,par''))
+                        | _ -> (match block par' with 
+                                | Error e -> Error e
+                                | Ok (body, par'') -> Ok (FnItem {name = name; params = params; return_type = None; body = body} ,par''))
                                     end
                     end
               
