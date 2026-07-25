@@ -14,6 +14,7 @@ type token_kind =
 (* Function / Statement Keywords *)
 | Fn
 | Let
+| In (* e.g., let x = 5 in x * x -> parses to let <name> = <expr> [ in <expr> *)
 | Mut
 | Const
 | Return
@@ -29,10 +30,9 @@ type token_kind =
 | Struct
 | Variant
 | Module
-| Use
 (* Other Keywords *)
-| In (* e.g., let x = 5 in x * x -> parses to let <name> = <expr> [ in <expr> *)
 | As (* safe casting *)
+| Use (* to use a module *)
 (* Punctuation *)
 | LeftParen
 | RightParen
