@@ -1,10 +1,10 @@
 open Span
 open Position
 
-type source = {
+type t = {
     contents: string;
     filename: string;
-    line_spans: span array;
+    line_spans: Span.t array;
 }
 
 let rec line_spans src start offsets acc =
@@ -58,7 +58,7 @@ let get_line line src =
     if line < 1 || line > Array.length src.line_spans then 
         Error ("line index out of range")
     else 
-        Ok (extract src.line_spans.(line - 1) src)
+        Ok (extract (src.line_spans.(line - 1)) src)
     
 let line_containing offset src = 
     match src |> line_from_offset offset with 

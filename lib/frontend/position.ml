@@ -1,4 +1,4 @@
-type position = {
+type t = {
     line: int;
     col: int;
 }

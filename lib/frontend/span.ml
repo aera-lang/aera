@@ -1,6 +1,6 @@
 type offset = int
 
-type span = {
+type t = {
     start_: offset;
     end_: offset;
 }

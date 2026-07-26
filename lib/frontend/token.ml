@@ -89,7 +89,7 @@ type token_kind =
 (* End Token *)
 | EOF
 
-type token = {
+type t = {
     kind: token_kind;
-    span: span;
+    span: Span.t;
 }

@@ -1,23 +1,26 @@
-open Error
+open Reporter
 open Span
+open Source
 open Token
 
-type lexer = {
+type t = {
+    module_name: string;
     source: string;
     start: int;
     curr: int;
     newline_offsets: offset list;
-    tokens: token list;
-    reporter: reporter;
+    tokens: Token.t list;
+    reporter: Reporter.t;
 }
 
-let init src = {
-	source = src;
+let init module_name src = {
+    module_name = module_name;
+	source = src.contents;
     start = 0;
     curr = 0;
     newline_offsets = [];
     tokens = [];
-    reporter = { Error.errors = [] };
+    reporter = [];
 } 
 
 let is_digit c = 
@@ -77,6 +80,11 @@ let bump lex = { lex with curr = lex.curr + 1 } (* moves the current pointer by 
 let add_token kind lex =
     let token = { kind = kind; span = { start_ = lex.start; end_ = lex.curr } } in
     { lex with tokens = token :: lex.tokens }
+
+let report_error msg lex =
+    let span = { start_ = lex.start; end_ = lex.curr } in
+    let lex = { lex with reporter = add_error lex.module_name span msg None lex.reporter } in
+    add_token Illegal lex
 
 let rec read_line_comment lex = 
     if peek lex = Some '\n' || is_at_end lex then lex
@@ -359,7 +367,7 @@ let read_token lex =
     | '<' -> (match peek lex with
             | Some '#' -> (match read_block_comment (bump lex) with (* looking at block comment <# *)
                 | Ok lex -> lex
-                | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+                | Error (msg, lex) -> lex |> report_error msg)
             | Some '<' -> let lex' = bump lex in (* looking now at << *)
                 (match peek lex' with
                 | Some '=' -> lex' |> bump |> add_token LessLessEqual
@@ -426,23 +434,18 @@ let read_token lex =
     (* Literals *)
     | '\'' -> (match read_char lex with 
         | Ok lex -> lex
-        | Error (msg, lex) -> 
-            let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+        | Error (msg, lex) -> lex |> report_error msg)
     | '"' -> (match read_string lex with
         | Ok lex -> lex
-        | Error (msg, lex) -> 
-            let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+        | Error (msg, lex) -> lex |> report_error msg)
     | c when is_digit c -> (match read_number lex c with
         | Ok lex -> lex
-        | Error (msg, lex) -> 
-            let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+        | Error (msg, lex) -> lex |> report_error msg)
     | c when is_alpha c -> (match read_identifier lex with
         | Ok lex -> lex
-        | Error (msg, lex) -> 
-            let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+        | Error (msg, lex) -> lex |> report_error msg)
     (* Character not supported in language, report error *)
-    | _ -> let msg = "unexpected character '" ^ String.make 1 c ^ String.make 1 '\'' in
-            let lex = { lex with reporter = add_error msg lex.reporter } in add_token Illegal lex
+    | _ -> lex |> report_error (Printf.sprintf "unexpected character '%c'" c)
         
 let rec read_tokens lex =
     if is_at_end lex then

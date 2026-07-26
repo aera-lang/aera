@@ -3,7 +3,7 @@ open Error
 open Lexer
 open Token
    
-type parser = {
+type t = {
     tokens: token list;
     reporter: reporter;
     curr: int;
