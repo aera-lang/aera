@@ -1,16 +1,25 @@
 # Aera Programming Language
 
-> *Where ideas take shape.*
+<p align="center">
+  <img src="images/mimi.png" width="256" alt="mimi logo">
+</p>
+
+<div align="center">
+
+[![Release](https://img.shields.io/github/v/release/aera-lang/aera?include_prereleases)](https://github.com/aera-lang/aera/releases)
+[![License](https://img.shields.io/github/license/aera-lang/aera)](LICENSE)
+
+</div>
 
 Aera is an expression-oriented programming language centered around clarity and simplicity. There should be little to no friction when designing and writing code. 
 
-It should just feel right.
+It should just feel *right.*
 
-Aera's design is shaped by the needs of interactive applications such as games and GUIs. The goal is not just to write code, but to shape ideas into systems that stay clear and understandable as they grow.
+Aera aims to be statically typed with automatic memory management, leaning into functional programming concepts like immutable state and algebraic data types.
 
-Aera aims to be statically typed with automatic memory management, leaning into functional programming concepts like immutable state and algebraic data types. These are design goals the language is actively working towards. See [Current Status](#current-status) for what's been implemented today.
+Aera takes inspiration from OCaml, Gleam, Swift and Go.
 
-Aera takes inspiration from modern C++, Rust, OCaml, Swift and Go.
+See [Current Status](#current-status) for what's been implemented today.
 
 ## Quick Example
 
@@ -33,20 +42,24 @@ unit
 
 Aera is ***VERY*** early! 
 
-This is a first, barebones snapshot (`0.0.1`), not a stable release. The REPL supports function declarations, `let`/`const` bindings, arithmetic and logical expressions, `if`/`while`/`loop`, and function calls.
+Aera has no stable release at the moment. The first, barebones snapshot (`0.0.1`) supports function declarations, `let`/`const` bindings, arithmetic and logical expressions, `if`/`while`/`loop`, and function calls.
 
 ## Limitations
 
 This is a first snapshot, so *please* treat it accordingly. 
 
-The parser has no error recovery yet, so one bad token stops it cold instead of pointing you at the problem and moving on. Type annotations are parsed but nothing checks them. There's no way to group data yet, so no tuples and no arrays. And there's no `print` or any I/O to speak of, since the module system needs to be implemented first.
+The parser has no error recovery yet, so one bad token stops it completely instead of pointing you at the problem and moving on. 
+
+Type annotations are parsed but there's nothing that checks them. The language doesn't currently support compound types like tuples and arrays. 
+
+And there's no `print` or any I/O to speak of, since the module system needs to be implemented first.
 
 ## Installation
 
 Clone the repo and run it with `make`:
 
 ```sh
-git clone https://github.com/you/aera.git
+git clone https://github.com/aera-lang/aera.git
 cd aera
 make run
 ```
