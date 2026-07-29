@@ -1,7 +1,7 @@
 # Aera Programming Language
 
 <p align="center">
-  <img src="images/mimi.png" width="256" alt="mimi logo">
+  <img src="images/mallow.png" width="256" alt="Aera logo">
 </p>
 
 <div align="center">
