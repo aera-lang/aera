@@ -79,9 +79,7 @@ Or just double-click it in File Explorer.
 
 ## Documentation
 
-For complete language documentation, see the [`docs/spec/README.md`](docs/spec/) directory.
-
-> Note: Documentation will soon move to Aera's website ([`aera.codes`](https://aera.codes)).
+For complete language documentation, view the ([`Atlas`](https://aera.codes/atlas)) at Aera's website.
 
 ## License
 

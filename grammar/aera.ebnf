@@ -88,7 +88,7 @@ statement = item
             | let_statement
             | const_statement ;
 
-let_statement = "let" identifier [ ":" type ] [ "=" expression ] ;
+let_statement = "let" [ "mut" ] identifier [ ":" type ] "=" expression ;
 const_statement = "const" identifier [ ":" type ] "=" expression ;
 
 literal = integer_literal
