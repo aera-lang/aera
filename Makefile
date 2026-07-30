@@ -10,9 +10,9 @@ endif
 	./_build/default/bin/main.exe $(FILE)
 
 build:
-  @echo "Compiling the language..."
+	@echo "Compiling the language..."
 	@opam exec -- dune build
 
 clean:
-  @echo "Cleaning up build..."
+	@echo "Cleaning up build..."
 	@opam exec -- dune clean
