@@ -1,10 +1,22 @@
 program = { item } EOF ;
 
-item = function ;
+item = function 
+       | struct
+       | variant
+       | const ;
 
-function = "fn" identifier "(" [parameter_list] ")" ["->", type] block_expression ;
+function = "fn" identifier "(" [ parameter_list ] ")" [ "->", type ] block_expression ;
 parameter_list = parameter { "," parameter } ;
 parameter = identifier ":" type ;
+
+struct = "struct" identifier "{" { field_declaration } "}" ;
+field_declaration_list = field_declaration { "," field_declaration } ;
+field_declaration = identifier ":" type [ "=" expression ] ;
+
+variant = "variant" identifier "{" { variant_case } "} ;
+variant_case = identifier "(" [ field_declaration_list ] ")"
+
+const = "const" identifier [ ":" type ] "=" expression ;
 
 expression = expression_with_block
             | expression_without_block ;
@@ -80,16 +92,12 @@ grouped_expression = "(" expression ")" ;
 call_expression = "(" [ call_params ] ")" ;
 call_params = expression { ","  expression } ;
 break_expression = "break" [ expression ] ;
-continue_expression = "continue" ;
-
 return_expression = "return" [ expression ] ;
 
 statement = item
-            | let_statement
-            | const_statement ;
+            | let_statement ;
 
 let_statement = "let" [ "mut" ] identifier [ ":" type ] "=" expression ;
-const_statement = "const" identifier [ ":" type ] "=" expression ;
 
 literal = integer_literal
           | float_literal
