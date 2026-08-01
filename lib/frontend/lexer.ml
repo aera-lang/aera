@@ -4,21 +4,17 @@ open Source
 open Token
 
 type t = {
-    module_name: string;
-    source: string;
+    source: Source.t;
     start: int;
     curr: int;
-    newline_offsets: offset list;
     tokens: Token.t list;
     reporter: Reporter.t;
 }
 
-let init module_name src = {
-    module_name = module_name;
-	source = src.contents;
+let create src = {
+	source = src;
     start = 0;
-    curr = 0;
-    newline_offsets = [];
+    curr = 0;    
     tokens = [];
     reporter = [];
 } 
@@ -51,26 +47,24 @@ let is_printable c =
     is_alpha c || is_digit c || is_symbol c || is_space c
 
 let is_at_end lex =
-    lex.curr >= String.length lex.source
+    lex.curr >= String.length lex.source.contents
 
 let peek lex = 
     if is_at_end lex then
         None
     else
-        Some lex.source.[lex.curr] (* returns the character at the current pointer *)
+        Some lex.source.contents.[lex.curr] (* returns the character at the current pointer *)
 
 let peek_next lex = 
-    if lex.curr + 1 >= String.length lex.source then
+    if lex.curr + 1 >= String.length lex.source.contents then
         None
     else
-        Some lex.source.[lex.curr + 1] (* returns the character 1 position ahead of the current pointer *)
+        Some lex.source.contents.[lex.curr + 1] (* returns the character 1 position ahead of the current pointer *)
 
 let advance lex =
-    let c = lex.source.[lex.curr] in (* creates a NEW lexer record with the updated current pointer and other possible values *)
+    let c = lex.source.contents.[lex.curr] in (* creates a NEW lexer record with the updated current pointer and other possible values *)
     match c with 
-    | '\n' -> (c, { lex with 
-                    curr = lex.curr + 1;
-                    newline_offsets = lex.curr :: lex.newline_offsets })
+    | '\n' -> (c, { lex with curr = lex.curr + 1; })
     | '\t' -> (c, { lex with curr = lex.curr + 1; })
     | '\r' -> (c, { lex with curr = lex.curr + 1; })
     | _ -> (c, { lex with curr = lex.curr + 1; })
@@ -83,7 +77,7 @@ let add_token kind lex =
 
 let report_error msg lex =
     let span = { start_ = lex.start; end_ = lex.curr } in
-    let lex = { lex with reporter = add_error lex.module_name span msg None lex.reporter } in
+    let lex = { lex with reporter = add_error lex.source.filename span msg None lex.reporter } in
     add_token Illegal lex
 
 let rec read_line_comment lex = 
@@ -299,7 +293,7 @@ let read_identifier lex =
     match read_identifier_helper lex with
     | Error e -> Error e
     | Ok lex' -> let lexeme =
-        String.sub lex'.source lex'.start (lex'.curr - lex'.start) in
+        String.sub lex.source.contents lex'.start (lex'.curr - lex'.start) in
         match String.lowercase_ascii lexeme with
         (* Bool Keywords*)
         | "true"        -> lex' |> add_token True |> Result.ok

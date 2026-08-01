@@ -7,12 +7,21 @@ type t = {
     line_spans: Span.t array;
 }
 
-let rec line_spans src start offsets acc =
-    match offsets with
-    | [] -> ({ start_ = start; end_ = String.length src.contents } :: acc)
-                |> List.rev
-                |> Array.of_list
-    | offset :: rest -> { start_ = start; end_ = offset } :: acc |> line_spans src (offset + 1) rest
+let find_next_newline curr contents =
+    String.index_from_opt contents curr '\n'
+
+let rec line_spans contents start acc =
+    match contents |> find_next_newline start with 
+    | None -> { start_ = start; end_ = String.length contents } :: acc
+            |> List.rev
+            |> Array.of_list
+    | Some pos -> { start_ = start; end_ = pos } :: acc |> line_spans contents (pos + 1)
+
+let create contents filename = {
+    contents = contents;
+    filename = filename;
+    line_spans = line_spans contents 0 [];
+} 
 
 let line_from_offset offset src =
     let rec loop left right =
@@ -22,7 +31,7 @@ let line_from_offset offset src =
             else
                 let span = src.line_spans.(left - 1) in
                 if offset <= span.end_ then
-                    Ok left (* return the index instead of the span -> can find span by doing spans.(index - 1) since it's 1-indexed*)
+                    Ok left (* return the index instead of the span -> can find span by doing spans.(index - 1) since it's 1-indexed *)
                 else
                     Error "offset is beyond the end of the source"
         else

@@ -1,6 +1,5 @@
 open Frontend
 open Alcotest
-open Int64
 
 (* Helper functions *)
 
@@ -23,7 +22,7 @@ let make_token kind lexeme line col =   { Token.kind; lexeme; pos = { line; col 
 
 let token_to_string kind =
   match kind with
-  | Token.Identifier str      -> Printf.sprintf "identifier(%s)" str
+  | Token.Identifier str      -> "identifier(%s)"
   | IntLiteral num            -> Printf.sprintf "int(%d)" num
   | FloatLiteral num          -> Printf.sprintf "float(%f)" num
   | CharLiteral c             -> Printf.sprintf "char(%c)" c

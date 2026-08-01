@@ -1,17 +1,17 @@
 open Ast
-open Error
+open Reporter
 open Lexer
 open Token
    
 type t = {
-    tokens: token list;
-    reporter: reporter;
+    tokens: Token.t list;
+    reporter: Reporter.t;
     curr: int;
 }
 
 (* Helper Functions *)
 
-let init tokens reporter = {
+let create tokens reporter = {
     tokens = tokens;
     reporter = reporter;
     curr = 0;
