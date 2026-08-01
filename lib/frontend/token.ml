@@ -29,7 +29,6 @@ type token_kind =
 (* User Type Keywords *)
 | Struct
 | Variant
-| Module
 (* Other Keywords *)
 | As (* safe casting *)
 | Use (* to use a module *)

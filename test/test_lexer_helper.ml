@@ -3,186 +3,199 @@ open Alcotest
 
 (* Helper functions *)
 
-let make_lexer source = {
-  Lexer.source;
-  start = 0;
-  curr = 0;
-  start_pos = { line = 1; col = 1 };
-	pos = { line = 1; col = 1 };
-  tokens = [];
-  reporter = { Error.errors = [] };
+let make_lexer src = {
+	Lexer.source = src;
+	start = 0;
+	curr = 0;
+	tokens = [];
+	reporter = [];
 }
 
-let lex_string input =
-  let lex = make_lexer input in
-  let lex' = Lexer.read_tokens lex in
-  lex'.tokens
+let make_source input filename = Source.create input filename
 
-let make_token kind lexeme line col =   { Token.kind; lexeme; pos = { line; col } }
+let lex_string input filename =
+	let src = make_source input filename in
+  	let lex = make_lexer src in
+  	let lex' = Lexer.read_tokens lex in
+  	lex'.tokens
+
+let make_token kind lexeme start_ end_ =   { Token.kind; span = { start_; end_ } }
 
 let token_to_string kind =
-  match kind with
-  | Token.Identifier str      -> "identifier(%s)"
-  | IntLiteral num            -> Printf.sprintf "int(%d)" num
-  | FloatLiteral num          -> Printf.sprintf "float(%f)" num
-  | CharLiteral c             -> Printf.sprintf "char(%c)" c
-  | StringLiteral str         -> Printf.sprintf "str(%s)" str
-  | True                      -> Printf.sprintf "bool(%b)" true
-  | False                     -> Printf.sprintf "bool(%b)" false
-  | Fn                        -> "fn"
-  | Let                       -> "let"
-  | Mut                       -> "mut"
-  | Const                     -> "const"
-  | If                        -> "if"
-  | Else                      -> "else"
-  | For                       -> "for"
-  | While                     -> "while"
-  | Loop                      -> "loop"
-  | Match                     -> "match"
-  | Break                     -> "break"
-  | Continue                  -> "continue"
-  | Return                    -> "return"
-  | In                        -> "in"
-  | As                        -> "as"
-  | Unit                      -> "unit"
-  | LeftParen                 -> "("
-  | RightParen                -> ")"
-  | LeftBrace                 -> "{"
-  | RightBrace                -> "}"
-  | LeftBracket               -> "["
-  | RightBracket              -> "]"
-  | Comma                     -> ","
-  | Period                    -> "."
-  | Colon                     -> ":"
-  | LessLessEqual             -> "<<="
-  | GreaterGreaterEqual       -> ">>="
-  | PeriodPeriodEqual         -> "..="
-  | AmpAmp                    -> "&&"
-  | PipePipe                  -> "||"
-  | EqualEqual                -> "=="
-  | ExclaimEqual              -> "!="
-  | LessEqual                 -> "<="
-  | GreaterEqual              -> ">="
-  | LessLess                  -> "<<"
-  | GreaterGreater            -> ">>"
-  | PlusEqual                 -> "+="
-  | MinusEqual                -> "-="
-  | StarEqual                 -> "*="
-  | SlashEqual                -> "/="
-  | PercentEqual              -> "%="
-  | AmpEqual                  -> "&="
-  | PipeEqual                 -> "|="
-  | CaretEqual                -> "^="
-  | MinusGreater              -> "->"
-  | PeriodPeriod              -> ".."
-  | EqualGreater              -> "=>"
-  | QuestionQuestion          -> "??"
-  | Amp                       -> "&"
-  | Pipe                      -> "|"
-  | Caret                     -> "^"
-  | Tilde                     -> "~"
-  | Plus                      -> "+"
-  | Minus                     -> "-"
-  | Star                      -> "*"
-  | Slash                     -> "/"
-  | Percent                   -> "%"
-  | Question                  -> "?"
-  | At                        -> "@"
-  | Exclaim                   -> "!"
-  | Less                      -> "<"
-  | Greater                   -> ">"
-  | Equal                     -> "="
-  | Illegal				            -> "illegal"
-  | EOF                       -> "eof"
-  | _						              -> ""
+	match kind with
+	| Token.Identifier                -> "identifier"
+	| IntLiteral                -> "int literal"
+	| FloatLiteral              -> "float literal"
+	| CharLiteral               -> "char literal"
+	| StringLiteral             -> "string literal"
+	| Unit                      -> "unit"
+	| True                      -> Printf.sprintf "bool(%b)" true
+	| False                     -> Printf.sprintf "bool(%b)" false
+	(* Function / Statement Keywords *)
+	| Fn						-> "fn"
+	| Let						-> "let"
+	| In						-> "in"
+	| Mut                       -> "mut"
+	| Const                     -> "const"
+  	| Return                    -> "return"
+	(* If / Loop / Match Keywords *)
+	| If                        -> "if"
+	| Else                      -> "else"
+	| For                       -> "for"
+	| While                     -> "while"
+	| Loop                      -> "loop"
+	| Match                     -> "match"
+	| Break                     -> "break"
+	(* User Type Keywords *)
+	| Struct					-> "struct"
+	| Variant					-> "variant"
+	(* Other Keywords *)
+	| As                        -> "as"
+	| Use						-> "use"
+	(* Punctuation *)
+	| LeftParen                 -> "("
+	| RightParen                -> ")"
+	| LeftBrace                 -> "{"
+	| RightBrace                -> "}"
+	| LeftBracket               -> "["
+	| RightBracket              -> "]"
+	| Comma                     -> ","
+	| Period                    -> "."
+	| Colon                     -> ":"
+	| LessLessEqual             -> "<<="
+	| GreaterGreaterEqual       -> ">>="
+	| PeriodPeriodEqual         -> "..="
+	| AmpAmp                    -> "&&"
+	| PipePipe                  -> "||"
+	| EqualEqual                -> "=="
+	| ExclaimEqual              -> "!="
+	| LessEqual                 -> "<="
+	| GreaterEqual              -> ">="
+	| LessLess                  -> "<<"
+	| GreaterGreater            -> ">>"
+	| PlusEqual                 -> "+="
+	| MinusEqual                -> "-="
+	| StarEqual                 -> "*="
+	| SlashEqual                -> "/="
+	| PercentEqual              -> "%="
+	| AmpEqual                  -> "&="
+	| PipeEqual                 -> "|="
+	| CaretEqual                -> "^="
+	| MinusGreater              -> "->"
+	| PeriodPeriod              -> ".."
+	| EqualGreater              -> "=>"
+	| QuestionQuestion          -> "??"
+	| Amp                       -> "&"
+	| Pipe                      -> "|"
+	| Caret                     -> "^"
+	| Tilde                     -> "~"
+	| Plus                      -> "+"
+	| Minus                     -> "-"
+	| Star                      -> "*"
+	| Slash                     -> "/"
+	| Percent                   -> "%"
+	| Question                  -> "?"
+	| At                        -> "@"
+	| Exclaim                   -> "!"
+	| Less                      -> "<"
+	| Greater                   -> ">"
+	| Equal                     -> "="
+	| Illegal				    -> "illegal"
+	| EOF                       -> "eof"
+	| _						    -> ""
 
-(* Shortcut constructors *)
+(* Shortcut Constructors *)
 
-let identifier str line col                 = make_token (Token.Identifier str) str line col
-let int_lit num lexeme line col             = make_token (Token.IntLiteral num) lexeme line col
-let float_lit num lexeme line col           = make_token (Token.FloatLiteral num) lexeme line col
-let char_lit char line col                  = make_token (Token.CharLiteral char) (String.make 1 char) line col
-let str_lit str line col                    = make_token (Token.StringLiteral str) str line col
-let true_lit line col                       = make_token Token.True "true" line col
-let false_lit line col                      = make_token Token.True "false" line col
-let fn line col                             = make_token Token.Fn "fn" line col
-let let_ line col                           = make_token Token.Let "let" line col
-let mut line col                            = make_token Token.Mut "mut" line col
-let const line col                          = make_token Token.Const "const" line col
-let if_ line col                            = make_token Token.If "if" line col
-let else_ line col                          = make_token Token.Else "else" line col
-let for_ line col                           = make_token Token.For "for" line col
-let while_ line col                         = make_token Token.While "while" line col
-let loop line col                           = make_token Token.Loop "loop" line col
-let match_ line col                         = make_token Token.Match "match" line col
-let break_ line col                         = make_token Token.Break "break" line col
-let continue_ line col                      = make_token Token.Continue "continue" line col
-let return_ line col                        = make_token Token.Return "return" line col
-let in_ line col                            = make_token Token.In "in" line col
-let as_ line col                            = make_token Token.As "as" line col
-let unit line col                           = make_token Token.Unit "unit" line col
-let left_paren line col                     = make_token Token.LeftParen "(" line col
-let right_paren line col                    = make_token Token.RightParen ")" line col
-let left_brace line col                     = make_token Token.LeftBrace "{" line col
-let right_brace line col                    = make_token Token.RightBrace "}" line col
-let left_bracket line col                   = make_token Token.LeftBracket "[" line col
-let right_bracket line col                  = make_token Token.RightBracket "]" line col
-let comma line col                          = make_token Token.Comma "," line col
-let period line col                         = make_token Token.Period "." line col
-let colon line col                          = make_token Token.Colon ":" line col
-let less_less_equal line col                = make_token Token.LessLessEqual "<<=" line col
-let greater_greater_equal line col          = make_token Token.GreaterGreaterEqual ">>=" line col
-let period_period_equal line col            = make_token Token.PeriodPeriodEqual "..=" line col
-let amp_amp line col                        = make_token Token.AmpAmp "&&" line col
-let pipe_pipe line col                      = make_token Token.PipePipe "||" line col
-let equal_equal line col                    = make_token Token.EqualEqual "==" line col
-let exclaim_equal line col                  = make_token Token.ExclaimEqual "!=" line col
-let less_equal line col                     = make_token Token.LessEqual "<=" line col
-let greater_equal line col                  = make_token Token.GreaterEqual ">=" line col
-let less_less line col                      = make_token Token.LessLess "<<" line col
-let greater_greater line col                = make_token Token.GreaterGreater ">>" line col
-let plus_equal line col                     = make_token Token.PlusEqual "+=" line col
-let minus_equal line col                    = make_token Token.MinusEqual "-=" line col
-let star_equal line col                     = make_token Token.StarEqual "*=" line col
-let slash_equal line col                    = make_token Token.SlashEqual "/=" line col
-let percent_equal line col                  = make_token Token.PercentEqual "%=" line col
-let amp_equal line col                      = make_token Token.AmpEqual "&=" line col
-let pipe_equal line col                     = make_token Token.PipeEqual "|=" line col
-let caret_equal line col                    = make_token Token.CaretEqual "^=" line col
-let minus_greater line col                  = make_token Token.MinusGreater "->" line col
-let period_period line col                  = make_token Token.PeriodPeriod ".." line col
-let equal_greater line col                  = make_token Token.EqualGreater "=>" line col
-let question_question line col              = make_token Token.QuestionQuestion "??" line col
-let amp line col                            = make_token Token.Amp "&" line col
-let pipe line col                           = make_token Token.Pipe "|" line col
-let caret line col                          = make_token Token.Caret "^" line col
-let tilde line col                          = make_token Token.Tilde "~" line col
-let plus line col                           = make_token Token.Plus "+" line col
-let minus line col                          = make_token Token.Minus "-" line col
-let star line col                           = make_token Token.Star "*" line col
-let slash line col                          = make_token Token.Slash "/" line col
-let percent line col                        = make_token Token.Percent "%" line col
-let question line col                       = make_token Token.Question "?" line col
-let at line col                             = make_token Token.At "@" line col
-let exclaim line col                        = make_token Token.Exclaim "!" line col
-let less line col                           = make_token Token.Less "<" line col
-let greater line col                        = make_token Token.Greater ">" line col
-let equal line col                          = make_token Token.Equal "=" line col
-let illegal lexeme line col                 = make_token Token.Illegal lexeme line col
-let eof line col                            = make_token Token.EOF "" line col
+let identifier start_ end_                 		= make_token Token.Identifier start_ end_
+let int_lit start_ end_             			= make_token Token.IntLiteral start_ end_
+let float_lit start_ end_           			= make_token Token.FloatLiteral start_ end_
+let char_lit start_ end_                  		= make_token Token.CharLiteral start_ end_
+let str_lit start_ end_                    		= make_token Token.StringLiteral start_ end_
+let unit start_ end_                           = make_token Token.Unit "unit" start_ end_
+let true_lit start_ end_                       = make_token Token.True "true" start_ end_
+let false_lit start_ end_                      = make_token Token.True "false" start_ end_
+(* Function / Statement Keywords *)
+let fn start_ end_                             = make_token Token.Fn "fn" start_ end_
+let let_ start_ end_                           = make_token Token.Let "let" start_ end_
+let in_ start_ end_                            = make_token Token.In "in" start_ end_
+let mut start_ end_                            = make_token Token.Mut "mut" start_ end_
+let const start_ end_                          = make_token Token.Const "const" start_ end_
+let return_ start_ end_                        = make_token Token.Return "return" start_ end_
+(* If / Loop / Match Keywords *)
+let if_ start_ end_                            = make_token Token.If "if" start_ end_
+let else_ start_ end_                          = make_token Token.Else "else" start_ end_
+let for_ start_ end_                           = make_token Token.For "for" start_ end_
+let while_ start_ end_                         = make_token Token.While "while" start_ end_
+let loop start_ end_                           = make_token Token.Loop "loop" start_ end_
+let match_ start_ end_                         = make_token Token.Match "match" start_ end_
+let break_ start_ end_                         = make_token Token.Break "break" start_ end_
+(* User Type Keywords *)
+let struct_ start_ end_                         = make_token Token.Struct "struct" start_ end_
+let variant start_ end_                         = make_token Token.Variant "variant" start_ end_
+(* Other Keywords *)
+let as_ start_ end_                            = make_token Token.As "as" start_ end_
+let use start_ end_                            = make_token Token.Use "use" start_ end_
+(* Punctuation*)
+let left_paren start_ end_                     = make_token Token.LeftParen "(" start_ end_
+let right_paren start_ end_                    = make_token Token.RightParen ")" start_ end_
+let left_brace start_ end_                     = make_token Token.LeftBrace "{" start_ end_
+let right_brace start_ end_                    = make_token Token.RightBrace "}" start_ end_
+let left_bracket start_ end_                   = make_token Token.LeftBracket "[" start_ end_
+let right_bracket start_ end_                  = make_token Token.RightBracket "]" start_ end_
+let comma start_ end_                          = make_token Token.Comma "," start_ end_
+let period start_ end_                         = make_token Token.Period "." start_ end_
+let end_on start_ end_                          = make_token Token.Colon ":" start_ end_
+let less_less_equal start_ end_                = make_token Token.LessLessEqual "<<=" start_ end_
+let greater_greater_equal start_ end_          = make_token Token.GreaterGreaterEqual ">>=" start_ end_
+let period_period_equal start_ end_            = make_token Token.PeriodPeriodEqual "..=" start_ end_
+let amp_amp start_ end_                        = make_token Token.AmpAmp "&&" start_ end_
+let pipe_pipe start_ end_                      = make_token Token.PipePipe "||" start_ end_
+let equal_equal start_ end_                    = make_token Token.EqualEqual "==" start_ end_
+let exclaim_equal start_ end_                  = make_token Token.ExclaimEqual "!=" start_ end_
+let less_equal start_ end_                     = make_token Token.LessEqual "<=" start_ end_
+let greater_equal start_ end_                  = make_token Token.GreaterEqual ">=" start_ end_
+let less_less start_ end_                      = make_token Token.LessLess "<<" start_ end_
+let greater_greater start_ end_                = make_token Token.GreaterGreater ">>" start_ end_
+let plus_equal start_ end_                     = make_token Token.PlusEqual "+=" start_ end_
+let minus_equal start_ end_                    = make_token Token.MinusEqual "-=" start_ end_
+let star_equal start_ end_                     = make_token Token.StarEqual "*=" start_ end_
+let slash_equal start_ end_                    = make_token Token.SlashEqual "/=" start_ end_
+let percent_equal start_ end_                  = make_token Token.PercentEqual "%=" start_ end_
+let amp_equal start_ end_                      = make_token Token.AmpEqual "&=" start_ end_
+let pipe_equal start_ end_                     = make_token Token.PipeEqual "|=" start_ end_
+let caret_equal start_ end_                    = make_token Token.CaretEqual "^=" start_ end_
+let minus_greater start_ end_                  = make_token Token.MinusGreater "->" start_ end_
+let period_period start_ end_                  = make_token Token.PeriodPeriod ".." start_ end_
+let equal_greater start_ end_                  = make_token Token.EqualGreater "=>" start_ end_
+let question_question start_ end_              = make_token Token.QuestionQuestion "??" start_ end_
+let amp start_ end_                            = make_token Token.Amp "&" start_ end_
+let pipe start_ end_                           = make_token Token.Pipe "|" start_ end_
+let caret start_ end_                          = make_token Token.Caret "^" start_ end_
+let tilde start_ end_                          = make_token Token.Tilde "~" start_ end_
+let plus start_ end_                           = make_token Token.Plus "+" start_ end_
+let minus start_ end_                          = make_token Token.Minus "-" start_ end_
+let star start_ end_                           = make_token Token.Star "*" start_ end_
+let slash start_ end_                          = make_token Token.Slash "/" start_ end_
+let percent start_ end_                        = make_token Token.Percent "%" start_ end_
+let question start_ end_                       = make_token Token.Question "?" start_ end_
+let at start_ end_                             = make_token Token.At "@" start_ end_
+let exclaim start_ end_                        = make_token Token.Exclaim "!" start_ end_
+let less start_ end_                           = make_token Token.Less "<" start_ end_
+let greater start_ end_                        = make_token Token.Greater ">" start_ end_
+let equal start_ end_                          = make_token Token.Equal "=" start_ end_
+let illegal lexeme start_ end_                 = make_token Token.Illegal lexeme start_ end_
+let eof start_ end_                            = make_token Token.EOF "" start_ end_
 
 let token_equal a b =
     a.Token.kind = b.Token.kind &&
-    a.Token.lexeme = b.Token.lexeme &&
-    a.Token.pos.line = b.Token.pos.line &&
-    a.Token.pos.col = b.Token.pos.col
+	a.Token.span.start_ = b.Token.span.start_ &&
+	a.Token.span.end_ = b.Token.span.end_
 
 let token_pp fmt tok =
-    Format.fprintf fmt "%s at %d:%d with lexeme: %s"
+    Format.fprintf fmt "%s at %d:%d"
         (token_to_string tok.Token.kind)
-        tok.Token.pos.line
-        tok.Token.pos.col
-        tok.Token.lexeme
+        tok.Token.span.start_
+        tok.Token.span.end_
 
 let token_testable = Alcotest.testable token_pp token_equal
 

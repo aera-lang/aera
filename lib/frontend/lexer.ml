@@ -322,7 +322,6 @@ let read_identifier lex =
         (* User Type Keywords *)
         | "struct"      -> lex' |> add_token Struct |> Result.ok
         | "variant"     -> lex' |> add_token Variant |> Result.ok
-        | "module"      -> lex' |> add_token Module |> Result.ok
         | "use"         -> lex' |> add_token Use |> Result.ok
 
         (* Other Keywords *)
