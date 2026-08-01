@@ -442,6 +442,7 @@ let read_token lex =
         
 let rec read_tokens lex =
     if is_at_end lex then
+        let lex = { lex with start = lex.curr } in
         { lex with tokens = List.rev (add_token EOF lex).tokens }
     else
         let lex = { lex with start = lex.curr } in
