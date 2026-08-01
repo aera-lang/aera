@@ -1,4 +1,4 @@
-open Frontend
+(* open Frontend
 open Eval
 open Value
 
@@ -52,3 +52,4 @@ let repl () =
     Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ ->
     exit 0));
     [StringMap.empty] |> repl_loop (* initialize empty environment *)
+ *)

@@ -444,5 +444,5 @@ let rec read_tokens lex =
     if is_at_end lex then
         { lex with tokens = List.rev (add_token EOF lex).tokens }
     else
-        let lex = { lex with start = lex.curr; } in
+        let lex = { lex with start = lex.curr } in
         read_tokens (read_token lex)

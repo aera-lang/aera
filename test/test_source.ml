@@ -183,54 +183,53 @@ let test_line_containing_out_of_range () =
     check_line_containing "offset out of range -> Error"
         (Error "offset is beyond the end of the source") 100 (src2 ())
 
-let () =
-    Alcotest.run "Source" [
-        ("line_spans", [
-            Alcotest.test_case "single line, no newline" `Quick test_single_line_no_newline;
-            Alcotest.test_case "multi line, no trailing newline" `Quick test_multi_line_no_trailing_newline;
-            Alcotest.test_case "multi line, trailing newline" `Quick test_multi_line_trailing_newline;
-            Alcotest.test_case "empty contents" `Quick test_empty_contents;
-            Alcotest.test_case "only newlines" `Quick test_only_newlines;
-            Alcotest.test_case "blank line in middle" `Quick test_blank_line_in_middle;
-            Alcotest.test_case "filename and contents preserved" `Quick test_filename_and_contents_preserved;
-        ]);
-        ("line_from_offset", [
-            Alcotest.test_case "start of source" `Quick test_line_from_offset_start;
-            Alcotest.test_case "within a line" `Quick test_line_from_offset_within_line;
-            Alcotest.test_case "on newline char" `Quick test_line_from_offset_on_newline_char;
-            Alcotest.test_case "start of next line" `Quick test_line_from_offset_start_of_next_line;
-            Alcotest.test_case "last line" `Quick test_line_from_offset_last_line;
-            Alcotest.test_case "end of source (EOF offset)" `Quick test_line_from_offset_end_of_source;
-            Alcotest.test_case "beyond end" `Quick test_line_from_offset_beyond_end;
-            Alcotest.test_case "negative offset" `Quick test_line_from_offset_negative;
-        ]);
-        ("offset_to_pos", [
-            Alcotest.test_case "start" `Quick test_offset_to_pos_start;
-            Alcotest.test_case "mid line" `Quick test_offset_to_pos_mid_line;
-            Alcotest.test_case "second line" `Quick test_offset_to_pos_second_line;
-            Alcotest.test_case "last line end (EOF)" `Quick test_offset_to_pos_last_line_end;
-            Alcotest.test_case "out of range" `Quick test_offset_to_pos_out_of_range;
-        ]);
-        ("span_to_pos", [
-            Alcotest.test_case "within one line" `Quick test_span_to_pos_within_one_line;
-            Alcotest.test_case "across lines" `Quick test_span_to_pos_across_lines;
-            Alcotest.test_case "invalid end offset" `Quick test_span_to_pos_invalid_end;
-        ]);
-        ("extract", [
-            Alcotest.test_case "extract full line" `Quick test_extract_line;
-            Alcotest.test_case "extract partial span" `Quick test_extract_partial;
-            Alcotest.test_case "extract zero-width span" `Quick test_extract_empty_span;
-        ]);
-        ("get_line", [
-            Alcotest.test_case "first line" `Quick test_get_line_first;
-            Alcotest.test_case "last line" `Quick test_get_line_last;
-            Alcotest.test_case "blank line" `Quick test_get_line_blank;
-            Alcotest.test_case "line 0" `Quick test_get_line_zero;
-            Alcotest.test_case "line beyond count" `Quick test_get_line_too_large;
-        ]);
-        ("line_containing", [
-            Alcotest.test_case "start of line" `Quick test_line_containing_start_of_line;
-            Alcotest.test_case "newline char" `Quick test_line_containing_newline_char;
-            Alcotest.test_case "out of range" `Quick test_line_containing_out_of_range;
-        ]);
-    ]
+let tests = [
+    ("line_spans", [
+        Alcotest.test_case "single line, no newline" `Quick test_single_line_no_newline;
+        Alcotest.test_case "multi line, no trailing newline" `Quick test_multi_line_no_trailing_newline;
+        Alcotest.test_case "multi line, trailing newline" `Quick test_multi_line_trailing_newline;
+        Alcotest.test_case "empty contents" `Quick test_empty_contents;
+        Alcotest.test_case "only newlines" `Quick test_only_newlines;
+        Alcotest.test_case "blank line in middle" `Quick test_blank_line_in_middle;
+        Alcotest.test_case "filename and contents preserved" `Quick test_filename_and_contents_preserved;
+    ]);
+    ("line_from_offset", [
+        Alcotest.test_case "start of source" `Quick test_line_from_offset_start;
+        Alcotest.test_case "within a line" `Quick test_line_from_offset_within_line;
+        Alcotest.test_case "on newline char" `Quick test_line_from_offset_on_newline_char;
+        Alcotest.test_case "start of next line" `Quick test_line_from_offset_start_of_next_line;
+        Alcotest.test_case "last line" `Quick test_line_from_offset_last_line;
+        Alcotest.test_case "end of source (EOF offset)" `Quick test_line_from_offset_end_of_source;
+        Alcotest.test_case "beyond end" `Quick test_line_from_offset_beyond_end;
+        Alcotest.test_case "negative offset" `Quick test_line_from_offset_negative;
+    ]);
+    ("offset_to_pos", [
+        Alcotest.test_case "start" `Quick test_offset_to_pos_start;
+        Alcotest.test_case "mid line" `Quick test_offset_to_pos_mid_line;
+        Alcotest.test_case "second line" `Quick test_offset_to_pos_second_line;
+        Alcotest.test_case "last line end (EOF)" `Quick test_offset_to_pos_last_line_end;
+        Alcotest.test_case "out of range" `Quick test_offset_to_pos_out_of_range;
+    ]);
+    ("span_to_pos", [
+        Alcotest.test_case "within one line" `Quick test_span_to_pos_within_one_line;
+        Alcotest.test_case "across lines" `Quick test_span_to_pos_across_lines;
+        Alcotest.test_case "invalid end offset" `Quick test_span_to_pos_invalid_end;
+    ]);
+    ("extract", [
+        Alcotest.test_case "extract full line" `Quick test_extract_line;
+        Alcotest.test_case "extract partial span" `Quick test_extract_partial;
+        Alcotest.test_case "extract zero-width span" `Quick test_extract_empty_span;
+    ]);
+    ("get_line", [
+        Alcotest.test_case "first line" `Quick test_get_line_first;
+        Alcotest.test_case "last line" `Quick test_get_line_last;
+        Alcotest.test_case "blank line" `Quick test_get_line_blank;
+        Alcotest.test_case "line 0" `Quick test_get_line_zero;
+        Alcotest.test_case "line beyond count" `Quick test_get_line_too_large;
+    ]);
+    ("line_containing", [
+        Alcotest.test_case "start of line" `Quick test_line_containing_start_of_line;
+        Alcotest.test_case "newline char" `Quick test_line_containing_newline_char;
+        Alcotest.test_case "out of range" `Quick test_line_containing_out_of_range;
+    ]);
+]

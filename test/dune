@@ -1,4 +1,4 @@
 (test
- (name test_lexer)
+ (name tests)
  (libraries aera alcotest)
- (modules test_source test_lexer test_lexer_helper))
+ (modules tests test_lexer_helper test_lexer test_source))
