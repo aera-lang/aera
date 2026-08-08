@@ -1,40 +1,44 @@
 program = { item } EOF ;
 
-item = function 
-       | struct
-       | variant
-       | const ;
+item = function_item 
+     | closure_item
+     | struct_item
+     | variant_item
+     | const_item ;
 
-function = "fn" identifier "(" [ parameter_list ] ")" [ "->", type ] block_expression ;
+function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->", type ] block_expression ;
 parameter_list = parameter { "," parameter } ;
 parameter = identifier ":" type ;
 
-struct = "struct" identifier "{" { field_declaration } "}" ;
+(* Not finalized *)
+closure_item = "fn" identifier "(" [ parameter_list ] ")" "=>" block_expression ; 
+
+struct_item = "struct" identifier "{" { field_declaration } "}" ;
 field_declaration_list = field_declaration { "," field_declaration } ;
 field_declaration = identifier ":" type [ "=" expression ] ;
 
-variant = "variant" identifier "{" { variant_case } "} ;
+variant_item = "variant" identifier "{" { variant_case } "} ;
 variant_case = identifier "(" [ field_declaration_list ] ")"
 
-const = "const" identifier [ ":" type ] "=" expression ;
+const_item = "const" identifier [ ":" type ] "=" expression ;
 
 expression = expression_with_block
-            | expression_without_block ;
+           | expression_without_block ;
 
 expression_with_block = block_expression
-            | loop_expression
-            | if_expression ;
+                      | loop_expression
+                      | if_expression ;
     
 expression_without_block = literal_expression
-            | operator_expression
-            | grouped_expression
-            | call_expression
-            | break_expression
-            | return_expression ;
+                         | operator_expression
+                         | grouped_expression
+                         | call_expression
+                         | break_expression
+                         | return_expression ;
 
 block_expression = "{" { statement } expression "}" ;
 loop_expression = infinite_loop_expression;
-            | while_loop_expression ;
+                | while_loop_expression ;
 
 infinite_loop_expression = "loop" block_expression ;
 while_loop_expression = "while" expression block_expression ; 
@@ -43,44 +47,44 @@ if_expression = "if" expression block_expression [ "else" block_expression ] ;
 
 literal_expression = literal ;
 operator_expression = assignment_expression
-            | compound_assignment_expression
-            | comparsion_expression
-            | arithmetic_expression
-            | bitwise_expression
-            | logical_expression
-            | negation_expression 
-            | type_cast_expression ;
+                    | compound_assignment_expression
+                    | comparsion_expression
+                    | arithmetic_expression
+                    | bitwise_expression
+                    | logical_expression
+                    | negation_expression 
+                    | type_cast_expression ;
 
 assignment_expression = expression "=" expression ;
 compound_assignment_expression = expression "+=" expression
-            | expression "-=" expression
-            | expression "*=" expression
-            | expression "/=" expression
-            | expression "%=" expression
-            | expression "&=" expression
-            | expression "|=" expression
-            | expression "^=" expression
-            | expression "<<=" expression
-            | expression ">>=" expression ;
+                              | expression "-=" expression
+                              | expression "*=" expression
+                              | expression "/=" expression
+                              | expression "%=" expression
+                              | expression "&=" expression
+                              | expression "|=" expression
+                              | expression "^=" expression
+                              | expression "<<=" expression
+                              | expression ">>=" expression ;
 
 comparsion_expression = expression "==" expression
-            | expression "!=" expression
-            | expression ">" expression
-            | expression "<" expression
-            | expression ">=" expression
-            | expression "<=" expression ;
+                      | expression "!=" expression
+                      | expression ">" expression
+                      | expression "<" expression
+                      | expression ">=" expression
+                      | expression "<=" expression ;
 
 arithmetic_expression = expression "+" expression
-            | expression "-" expression
-            | expression "*" expression
-            | expression "/" expression
-            | expression "%" expression ;
+                      | expression "-" expression
+                      | expression "*" expression
+                      | expression "/" expression
+                      | expression "%" expression ;
 
 bitwise_expression = expression "&" expression
-            | expression "|" expression
-            | expression "^" expression
-            | expression ">>" expression
-            | expression "<<" expression ;
+                   | expression "|" expression
+                   | expression "^" expression
+                   | expression ">>" expression
+                   | expression "<<" expression ;
 
 logical_expression = expression "&&" expression
             | expression "||" expression ;
@@ -95,15 +99,15 @@ break_expression = "break" [ expression ] ;
 return_expression = "return" [ expression ] ;
 
 statement = item
-            | let_statement ;
+          | let_statement ;
 
 let_statement = "let" [ "mut" ] identifier [ ":" type ] "=" expression ;
 
 literal = integer_literal
-          | float_literal
-          | character_literal
-          | string_literal
-          | boolean_literal ;
+        | float_literal
+        | character_literal
+        | string_literal
+        | boolean_literal ;
 
 integer_literal = decimal_integer
                 | hexadecimal_integer
@@ -130,13 +134,26 @@ digit = "0" ... "9";
 hex_digit = digit | "a" ... "f" | "A" ... "F" ;
 binary_digit = "0" | "1" ;
 octal_digit = "0" ... "7" ;
-symbol = "!" ... "/" | ":" ... "@" | "[" ... "`" | "{" ... "~" ;
+symbol = "!" ... "[" | "]" ... "`" | "{" ... "~" ;
 underscore = "_" ;
 escape_sequence = "\\" ( "n" | "t" | "r" | "\"" | "'" | "\\" ) ;
 space = " " ;
 
 identifier = ( alpha | "_" ) { ( alpha | digit | "_" ) } ;
 
-type = primitive_type ; 
+type = primitive_type 
+     | compound_type ; 
 
-primitive_type = "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "uint64" | "float32" | "float64" | "char" | "string" | "bool" ; 
+(* Should these be keywords? Probably *)
+primitive_type = "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "uint64" | "float32" | "float64" | "char" | "string" | "bool" | "unit" ; 
+compound_type = fixed_array_type 
+              | tuple_type
+              | user_defined_type ;
+
+fixed_array_type = type array_dimensions ;
+array_dimensions = "[" integer_literal "]" { "[" integer_literal "]" } ;
+
+tuple_type = "(" type "," [ type_list ] ")"
+type_list = type { "," type } ;
+
+user_defined_type = identifier ;

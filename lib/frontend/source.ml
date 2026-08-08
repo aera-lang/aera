@@ -15,7 +15,7 @@ let rec line_spans contents start acc =
     | None -> { start_ = start; end_ = String.length contents } :: acc
             |> List.rev
             |> Array.of_list
-    | Some pos -> { start_ = start; end_ = pos } :: acc |> line_spans contents (pos + 1)
+    | Some offset -> { start_ = start; end_ = offset } :: acc |> line_spans contents (offset + 1)
 
 let create contents filename = {
     contents = contents;
