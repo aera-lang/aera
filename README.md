@@ -17,7 +17,7 @@ It should just feel *right.*
 
 Aera aims to be statically typed with automatic memory management, leaning into functional programming concepts like immutable state and algebraic data types.
 
-Aera takes inspiration from OCaml, Gleam, Swift and Go.
+Aera takes inspiration from Effekt, OCaml, Gleam and Swift.
 
 See [Current Status](#current-status) for what's been implemented today.
 
