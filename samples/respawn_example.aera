@@ -1,0 +1,40 @@
+use std/io::{println}
+
+struct Vector3 {
+    x: float32
+    y: float32
+    z: float32
+}
+
+trait Respawnable {
+    fn respawn(self, spawn_point: Vector3)
+}
+
+struct Player {
+    name: string
+    health: int32
+    position: Vector3
+    score: int32
+}
+
+impl Respawnable for Player {
+    fn respawn(self, spawn_point: Vector3) {
+        self.health = 100
+        self.position = spawn_point
+        println("player {} has respawned", self.name)
+    }
+}
+
+struct Enemy {
+    kind: string
+    health: int32 
+    position: Vector3
+}
+
+impl Respawnable for Enemy {
+    fn respawn(self, spawn_point: Vector3) {
+        self.health = 50
+        self.position = spawn_point
+        println("enemy {} respawned", self.kind)
+    }
+}
