@@ -297,12 +297,6 @@ let test_line_comment () =
         eof 41 41;
     ]
 
-let test_block_comment () = 
-    let tokens = lex_string "<# this is a block comment and should be ignored #>" in
-    Test_lexer_helper.expect_tokens tokens [
-        eof 51 51;
-    ]
-
 let test_comment_ignored () = 
     let tokens = lex_string "let x = 5 # assign 5 to x" in
     Test_lexer_helper.expect_tokens tokens [
@@ -311,24 +305,6 @@ let test_comment_ignored () =
         equal 6 7;
         int_lit 8 9;
         eof 25 25;
-    ]
-
-let test_unterminated_block_comment () = 
-    let tokens = lex_string "let x = 5 <# this is not closed" in
-    Test_lexer_helper.expect_tokens tokens [
-        let_ 0 3;
-        identifier 4 5;
-        equal 6 7;
-        int_lit 8 9;
-        illegal 10 31;
-        eof 31 31;
-    ]
-
-let test_malformed_block_comment () = 
-    let tokens = lex_string "<# this is not closed again #" in
-    Test_lexer_helper.expect_tokens tokens [
-        illegal 0 29;
-        eof 29 29;
     ]
 
 (* Multi-Line *)
@@ -462,10 +438,7 @@ let tests = [
     ]);
     ("comments", [
         Alcotest.test_case "line comment" `Quick test_line_comment;
-        Alcotest.test_case "block comment" `Quick test_block_comment;
         Alcotest.test_case "comment ignored" `Quick test_comment_ignored;
-        Alcotest.test_case "unterminated block comment" `Quick test_unterminated_block_comment;
-        Alcotest.test_case "malformed block comment" `Quick test_malformed_block_comment;
     ]);
     ("multi-line", [
         Alcotest.test_case "hello world" `Quick test_hello_world;

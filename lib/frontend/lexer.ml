@@ -86,17 +86,6 @@ let rec read_line_comment lex =
         let (_, lex') = advance lex in
         read_line_comment lex'
 
-let rec read_block_comment lex =
-    if is_at_end lex then Error ("unterminated block comment", lex)
-    else if peek lex = Some '\n' then Error ("unterminated block comment", lex)
-    else if peek lex = Some '#' && peek_next lex = Some '>' then
-        let (_, lex') = advance lex in 
-        let (_, lex'') = advance lex' in
-        Ok lex''
-    else 
-        let (_, lex') = advance lex in
-        read_block_comment lex'
-
 let resolve_char lex c =
     if c = '\\' && not (is_at_end lex) then
         let (c', lex') = advance lex in
@@ -358,9 +347,6 @@ let read_token lex =
     | ' ' | '\r'  | '\t' | '\n' -> lex (* skip these characters, return same lexer state *)
     (* Operators *)
     | '<' -> (match peek lex with
-            | Some '#' -> (match read_block_comment (bump lex) with (* looking at block comment <# *)
-                | Ok lex -> lex
-                | Error (msg, lex) -> lex |> report_error msg)
             | Some '<' -> let lex' = bump lex in (* looking now at << *)
                 (match peek lex' with
                 | Some '=' -> lex' |> bump |> add_token LessLessEqual
