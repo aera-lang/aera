@@ -99,9 +99,11 @@ break_expression = "break" [ expression ] ;
 return_expression = "return" [ expression ] ;
 
 statement = item
-          | let_statement ;
+          | let_statement
+          | var_statement ;
 
-let_statement = "let" [ "mut" ] identifier [ ":" type ] "=" expression ;
+let_statement = "let" identifier [ ":" type ] "=" expression ;
+var_statement = "var" identifier [ ":" type ] "=" expression ;
 
 literal = integer_literal
         | float_literal
