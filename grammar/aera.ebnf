@@ -144,7 +144,6 @@ identifier = ( alpha | "_" ) { ( alpha | digit | "_" ) } ;
 type = primitive_type 
      | compound_type ; 
 
-(* Should these be keywords? Probably *)
 primitive_type = "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "uint64" | "float32" | "float64" | "char" | "string" | "bool" | "unit" ; 
 compound_type = fixed_array_type 
               | tuple_type

@@ -14,7 +14,7 @@ type token_kind =
 (* Function / Statement Keywords *)
 | Fn
 | Let
-| In (* e.g., let x = 5 in x * x -> parses to let <name> = <expr> [ in <expr> *)
+| Var
 | Mut
 | Const
 | Return
@@ -25,13 +25,20 @@ type token_kind =
 | While
 | Loop
 | Match
+| In
 | Break
 (* User Type Keywords *)
 | Struct
 | Variant
+| Use
+(* Algebraic Effects Keywords *)
+| Effect
+| Uses
+| With
+| Do
+| Resume
 (* Other Keywords *)
 | As (* safe casting *)
-| Use (* to use a module *)
 (* Punctuation *)
 | LeftParen
 | RightParen
@@ -82,7 +89,6 @@ type token_kind =
 | Equal
 (* Comments *)
 | LineComment  (* # *)
-| BlockComment (* <# ... #>*)
 (* Error *)
 | Illegal
 (* End Token *)
