@@ -95,9 +95,17 @@ and expr =
 (* Statements *)
 
 and stmt = 
+| Item              of item
 | LetStmt           of let_stmt
+| VarStmt           of var_stmt
 
 and let_stmt = { 
+    name: string;
+    typ: string option;
+    expr: expr;
+}
+
+and var_stmt = { 
     name: string;
     typ: string option;
     expr: expr;

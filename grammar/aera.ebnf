@@ -6,44 +6,74 @@ item = function_item
      | variant_item
      | const_item ;
 
-function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->", type ] block_expression ;
+(* Items *)
+
+function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] block_expression ;
 parameter_list = parameter { "," parameter } ;
 parameter = identifier ":" type ;
 
-(* Not finalized *)
-closure_item = "fn" identifier "(" [ parameter_list ] ")" "=>" block_expression ; 
+closure_item = "fn" "(" [ parameter_list ] ")" "=>" block_expression ;
 
 struct_item = "struct" identifier "{" { field_declaration } "}" ;
-field_declaration_list = field_declaration { "," field_declaration } ;
 field_declaration = identifier ":" type [ "=" expression ] ;
 
-variant_item = "variant" identifier "{" { variant_case } "} ;
-variant_case = identifier "(" [ field_declaration_list ] ")"
+variant_item = "variant" identifier "{" { variant_case } "}" ;
+variant_case = identifier "(" { field_declaration } ")" ;
 
 const_item = "const" identifier [ ":" type ] "=" expression ;
+
+(* Expressions *)
 
 expression = expression_with_block
            | expression_without_block ;
 
 expression_with_block = block_expression
                       | loop_expression
-                      | if_expression ;
+                      | if_expression 
+                      | match_expression ;
     
 expression_without_block = literal_expression
                          | operator_expression
                          | grouped_expression
                          | call_expression
                          | break_expression
-                         | return_expression ;
+                         | return_expression
+                         | array_expression
+                         | tuple_expression
+                         | struct_expression
+                         | variant_expression ;
 
 block_expression = "{" { statement } expression "}" ;
-loop_expression = infinite_loop_expression;
+loop_expression = infinite_loop_expression
                 | while_loop_expression ;
 
 infinite_loop_expression = "loop" block_expression ;
 while_loop_expression = "while" expression block_expression ; 
 
 if_expression = "if" expression block_expression [ "else" block_expression ] ;
+
+match_expression = "match" expression "{" match_case { match_case } "}" ;
+match_case = pattern "=>" expression ;
+
+pattern = literal
+        | identifier
+        | underscore
+        | array_pattern
+        | tuple_pattern
+        | struct_pattern
+        | variant_pattern ;
+
+pattern_list = pattern { ","  pattern } ;
+
+array_pattern = "[" pattern_list "]" ;
+tuple_pattern = "(" tuple_pattern_list ")" ;
+tuple_pattern_list = pattern "," [ pattern_list ] ;
+
+struct_pattern = identifier "{" [ field_pattern_list ] "}" ;
+field_pattern_list = field_pattern { "," field_pattern } ;
+field_pattern = identifier [ ":" pattern ] ;
+
+variant_pattern = identifier "(" [ pattern_list ] ")" ;
 
 literal_expression = literal ;
 operator_expression = assignment_expression
@@ -93,10 +123,19 @@ negation_expression = "-" expression
             | "!" expression ;
 
 grouped_expression = "(" expression ")" ;
-call_expression = "(" [ call_params ] ")" ;
-call_params = expression { ","  expression } ;
+call_expression = expression "(" [ expression_list ] ")" ;
+expression_list = expression { ","  expression } ;
 break_expression = "break" [ expression ] ;
 return_expression = "return" [ expression ] ;
+
+array_expression = "[" expression_list "]" ;
+tuple_expression = "(" tuple_expression_list ")" ;
+tuple_expression_list = expression "," [ expression_list ] ;
+
+struct_expression = identifier "{" { field_expression } "}" ;
+field_expression = identifier ":" expression ;
+
+variant_expression = call_expression ;
 
 statement = item
           | let_statement
@@ -120,13 +159,13 @@ decimal_integer = digit { digit } ;
 hexadecimal_integer = "0" ( "x" | "X")  hex_digit { hex_digit } ;
 binary_integer = "0" ( "b" | "B" ) binary_digit { binary_digit } ;
 octal_integer = "0" ( "o" | "O" ) octal_digit { octal_digit } ;
+
 float_literal = decimal_integer "." decimal_integer [ scientific_notation ]
               | decimal_integer scientific_notation ;
 scientific_notation = ( "e" | "E" ) [ "+" | "-" ] decimal_integer ;
 
-float_literal = integer_literal "." integer_literal ;
-character_literal = "'" character  "'" ";" ;
-string_literal = """ { character } """ ";" ;
+character_literal = "'" character  "'" ;
+string_literal = """ { character } """ ;
 boolean_literal = "true" | "false" ;
 
 character = printable | escape_sequence ;
@@ -151,8 +190,8 @@ compound_type = fixed_array_type
               | tuple_type
               | user_defined_type ;
 
-fixed_array_type = type array_dimensions ;
-array_dimensions = "[" integer_literal "]" { "[" integer_literal "]" } ;
+fixed_array_type = "[" type "," array_size "]" ;
+array_size = integer_literal ;
 
 tuple_type = "(" type "," [ type_list ] ")"
 type_list = type { "," type } ;

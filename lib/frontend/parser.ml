@@ -1,4 +1,4 @@
-(* open Ast
+open Ast
 open Reporter
 open Lexer
 open Token
@@ -40,7 +40,7 @@ let next par =
 
 let check kind par = 
     if is_at_end par then false
-    else
+    else 
         let token = peek par in token.kind = kind
 
 (* Expression Helper Functions *)
@@ -112,7 +112,7 @@ let get_assign_op tok_kind par =
 let expect_identifier par =
     let (tok, par') = next par in
     match tok.kind with 
-    | Identifier str        -> Ok(str, par')
+    | Identifier str        -> Ok(str, par') (* we don't carry the string, so we should return the token *)
     | _                     -> Error ("expected identifier name", tok, par)
 
 let parse_type par =
@@ -638,4 +638,4 @@ let parse_repl par =
                     | Ok (stmt, _) -> Ok (ReplStmt stmt))
     | _ -> (match par |> expr with 
             | Error (msg, _, _) -> Error msg
-            | Ok(expr, _) -> Ok (ReplExpr expr)) *)
+            | Ok(expr, _) -> Ok (ReplExpr expr)) 
