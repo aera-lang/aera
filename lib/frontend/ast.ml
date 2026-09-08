@@ -1,4 +1,9 @@
 open Token
+open Typ
+
+(* Type *)
+
+type typ = Typ.t 
 
 (* Basic Operators *)
 
@@ -26,22 +31,15 @@ type assign_op =
 (* Literals *)
 
 type literal =
-| LitInt of int
-| LitFloat of float
-| LitChar of char
-| LitString of string
-| LitBool of bool
+| IntLiteral of int (* CHANGE TO UNSIGNED INT 64 *)
+| FloatLiteral of float
+| CharLiteral of char
+| StringLiteral of string
+| BoolLiteral of bool
 
 (* Identifiers *)
 
 type identifier = string
-
-(* Types *)
-
-type typ = 
-| TName of string (* covers primitive types alongside user-defined types *)
-| TArray of typ * int (* should be unsigned int64, leave as int to keep things simple *)
-| TTuple of typ list
 
 (* Program *)
 
