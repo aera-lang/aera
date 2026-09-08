@@ -159,9 +159,7 @@ let read_radix_number lex ~pred ~notation ~name =
         else
             let+ lex'' = read_radix_number_helper lex' ~pred ~name in
             lex'' |> add_token IntLiteral
-
-
-
+            
 let rec read_hexadecimal_number_helper lex =
     match peek lex with
     | Some '.' -> Error ("hexadecimal numbers cannot have decimal points", lex)

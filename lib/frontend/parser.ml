@@ -1,4 +1,4 @@
-open Ast
+(* open Ast
 open Reporter
 open Lexer
 open Token
@@ -638,4 +638,4 @@ let parse_repl par =
                     | Ok (stmt, _) -> Ok (ReplStmt stmt))
     | _ -> (match par |> expr with 
             | Error (msg, _, _) -> Error msg
-            | Ok(expr, _) -> Ok (ReplExpr expr)) 
+            | Ok(expr, _) -> Ok (ReplExpr expr))  *)

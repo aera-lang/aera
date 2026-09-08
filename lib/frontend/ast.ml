@@ -26,60 +26,70 @@ type assign_op =
 (* Literals *)
 
 type literal =
-| LitInt of int (* resolve suffix and type later *)
-| LitFloat of float (* resolve suffix and type later *)
+| LitInt of int
+| LitFloat of float
 | LitChar of char
 | LitString of string
 | LitBool of bool
 
+(* Identifiers *)
+
+type identifier = string
+
+(* Types *)
+
+type typ = 
+| TName of string (* covers primitive types alongside user-defined types *)
+| TArray of typ * int (* should be unsigned int64, leave as int to keep things simple *)
+| TTuple of typ list
+
 (* Program *)
 
-type program = {
-    items: item list;
-}
+type program = item list (* no need to be a record *)
 
 and item =
 | FnItem of fn_item
+| ClosureItem of closure_item
 | StructItem of struct_item
 | VariantItem of variant_item
 | ConstItem of const_item
 
 and fn_item = {
-    name: string;
-    params: (string * string option) list;
-    return_type: string option; (* if omitted, return unit type *)
+    name: identifier;
+    params: (identifier * typ option) list;
+    return_type: typ option; (* if omitted, return unit type *)
+    body: expr;
+}
+
+and closure_item = {
+    params: (identifier * typ option) list;
+    return_type: typ option; (* if omitted, return unit type *)
     body: expr;
 }
 
 and struct_item = {
-    name: string;
-    fields: (string * string) list; (* format = name : type *)
+    name: identifier;
+    fields: (identifier * typ) list;
 }
 
-and variant_case = string * (string * string) list (* if the list is empty, the variant carries nothing *)
-                                                   (* note -> string * string will be changed to string * typ once
-                                                    type system has been implemented *)
+and variant_case = identifier * (identifier * typ) list (* if the list is empty, the variant carries nothing *)
+                                                   
 and variant_item = {
-    name: string;
+    name: identifier;
     cases: variant_case list;
 }
 
 and const_item = {
-    name: string;
-    typ: string option;
+    name: identifier;
+    typ: typ option;
     expr: expr;
 }
 
 (* Expressions *)
 
-and block = {
-    stmts: stmt list;
-    expr: expr; 
-}
-
 and expr =
 | Literal           of literal
-| Identifier        of string
+| Identifier        of identifier
 | Grouping          of expr
 | Call              of { callee: expr; args: expr list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
@@ -89,8 +99,41 @@ and expr =
 | InfiniteLoop      of expr
 | WhileLoop         of { cond: expr; body: expr }
 | IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
+| MatchExpr         of match_
 | BreakExpr         of expr option
 | ReturnExpr        of expr option
+| ArrayExpr         of expr list 
+| TupleExpr         of expr list
+| StructExpr        of { name: identifier; fields: (identifier * expr) list }
+
+and block = {
+    stmts: stmt list;
+    expr: expr; 
+}
+
+and pattern = 
+| LiteralPattern       of literal 
+| IdentifierPattern    of identifier
+| WildcardPattern
+| ArrayPattern         of pattern list
+| TuplePattern         of pattern list
+| StructPattern        of identifier * field_pattern list
+| VariantPattern       of identifier * pattern list     
+
+and field_pattern = {
+    field_name: identifier;
+    field_pattern: pattern option;
+}
+
+and match_case = {
+    pattern: pattern;
+    expr: expr;
+}
+
+and match_ = {
+    cond: expr;
+    cases: match_case list;
+}
 
 (* Statements *)
 
@@ -100,14 +143,14 @@ and stmt =
 | VarStmt           of var_stmt
 
 and let_stmt = { 
-    name: string;
-    typ: string option;
+    name: identifier;
+    typ: typ option;
     expr: expr;
 }
 
 and var_stmt = { 
-    name: string;
-    typ: string option;
+    name: identifier;
+    typ: typ option;
     expr: expr;
 }
 
