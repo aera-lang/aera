@@ -8,15 +8,15 @@ type t = {
     start: int;
     curr: int;
     tokens: Token.t list;
-    reporter: Reporter.t; (* the final reporter is the lexer + the parser, so lexer.reporter @ parser.reporter (they are lists) *)
+    reporter: Reporter.t;
 }
 
-let create src = {
+let create src rep = {
 	source = src;
     start = 0;
     curr = 0;    
     tokens = [];
-    reporter = [];
+    reporter = rep;
 } 
 
 let is_digit c = 
@@ -159,7 +159,7 @@ let read_radix_number lex ~pred ~notation ~name =
         else
             let+ lex'' = read_radix_number_helper lex' ~pred ~name in
             lex'' |> add_token IntLiteral
-            
+
 let rec read_hexadecimal_number_helper lex =
     match peek lex with
     | Some '.' -> Error ("hexadecimal numbers cannot have decimal points", lex)

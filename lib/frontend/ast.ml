@@ -31,7 +31,7 @@ type assign_op =
 (* Literals *)
 
 type literal =
-| IntLiteral of int (* CHANGE TO UNSIGNED INT 64 *)
+| IntLiteral of Int64.t
 | FloatLiteral of float
 | CharLiteral of char
 | StringLiteral of string

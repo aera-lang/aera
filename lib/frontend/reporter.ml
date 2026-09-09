@@ -66,9 +66,6 @@ let print_contents source_line col d =
     if token_length > 1 then
         prerr_string (String.make (token_length - 1) '~');
     prerr_newline ()
-
-let print_note note =
-    prerr_endline (Printf.sprintf "    note: %s" note)
    
 let print_diagnostic src d =
     match offset_to_pos d.span.start_ src with
@@ -83,11 +80,9 @@ let print_diagnostic src d =
                     print_contents source_line pos.col d;
                 (match d.note with
                 | None -> ()
-                | Some note -> print_note note);
+                | Some note -> prerr_endline (Printf.sprintf "    note: %s" note));
                 ()
         end
-
-    
 
 let print_errors src rep =
     List.iter (fun d ->
@@ -111,6 +106,4 @@ let print_notes src rep =
   ) rep
 
 let print src rep =
-    List.iter (fun d -> 
-        d |> print_diagnostic src
-    ) rep
+    List.iter (fun d -> d |> print_diagnostic src) rep

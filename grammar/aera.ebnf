@@ -139,10 +139,12 @@ variant_expression = call_expression ;
 
 statement = item
           | let_statement
-          | var_statement ;
+          | var_statement 
+          | expression_statement ;
 
 let_statement = "let" identifier [ ":" type ] "=" expression ;
 var_statement = "var" identifier [ ":" type ] "=" expression ;
+expression_statement = expression ;
 
 literal = integer_literal
         | float_literal

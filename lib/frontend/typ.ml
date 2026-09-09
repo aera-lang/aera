@@ -1,8 +1,9 @@
+open Int64
 type identifier = string
 
 type t = 
 | PrimitiveType of primitive_type
-| ArrayType of t * int (* should be unsigned int64, leave as int to keep things simple *)
+| ArrayType of t * Int64.t
 | TupleType of t list
 | UserType of identifier (* covers primitive types alongside user-defined types *)
 
