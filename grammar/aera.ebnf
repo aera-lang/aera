@@ -43,7 +43,7 @@ expression_without_block = literal_expression
                          | struct_expression
                          | variant_expression ;
 
-block_expression = "{" { statement } expression "}" ;
+block_expression = "{" { statement } [ expression ] "}" ;
 loop_expression = infinite_loop_expression
                 | while_loop_expression ;
 

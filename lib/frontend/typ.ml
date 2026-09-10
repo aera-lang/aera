@@ -1,4 +1,6 @@
 open Int64
+open Span
+
 type identifier = string
 
 type t = 
@@ -6,6 +8,7 @@ type t =
 | ArrayType of t * Int64.t
 | TupleType of t list
 | UserType of identifier (* covers primitive types alongside user-defined types *)
+| ErrorType of Span.t 
 
 and primitive_type = 
 | Int8 | Int16 | Int32 | Int64 

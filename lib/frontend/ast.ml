@@ -51,6 +51,7 @@ and item =
 | StructItem of struct_item
 | VariantItem of variant_item
 | ConstItem of const_item
+| ErrorItem of Span.t
 
 and fn_item = {
     name: identifier;
@@ -103,6 +104,7 @@ and expr =
 | ArrayExpr         of expr list 
 | TupleExpr         of expr list
 | StructExpr        of { name: identifier; fields: (identifier * expr) list }
+| ErrorExpr         of Span.t
 
 and block = {
     stmts: stmt list;
@@ -116,7 +118,8 @@ and pattern =
 | ArrayPattern         of pattern list
 | TuplePattern         of pattern list
 | StructPattern        of identifier * field_pattern list
-| VariantPattern       of identifier * pattern list     
+| VariantPattern       of identifier * pattern list   
+| ErrorPattern         of Span.t  
 
 and field_pattern = {
     field_name: identifier;
@@ -139,6 +142,8 @@ and stmt =
 | Item              of item
 | LetStmt           of let_stmt
 | VarStmt           of var_stmt
+| ExprStmt          of expr
+| ErrorStmt         of Span.t
 
 and let_stmt = { 
     name: identifier;

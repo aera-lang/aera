@@ -13,7 +13,7 @@ let binary_bp op =
     | Add | Sub                         -> Some (17, 18)
     | Mul | Div | Mod                   -> Some (19, 20)
 
-let to_binary_op tok_kind par =
+let to_binary_op tok_kind =
     match tok_kind with
     (* Arithmetic *)
     | Plus              -> Some Add
@@ -44,7 +44,7 @@ let assign_bp op =
     | EqAssign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | AndAssign | OrAssign | XorAssign | ShlAssign | ShrAssign 
     -> Some (2, 1) (* format = (left binding power, right binding power) *)
 
-let to_assign_op tok_kind par =
+let to_assign_op tok_kind =
     match tok_kind with
     | Equal                 -> Some EqAssign
     | PlusEqual             -> Some AddAssign
@@ -59,11 +59,11 @@ let to_assign_op tok_kind par =
     | GreaterGreaterEqual   -> Some ShrAssign
     | _                     -> None
 
-let unary_bp op = (* or prefix_bp *)
+let prefix_bp op =
     match op with 
     | Neg | Not -> 30
 
-let to_unary_op tok_kind par =
+let to_prefix_op tok_kind =
     match tok_kind with 
     | Minus                 -> Some Not
     | Exclaim               -> Some Neg 
