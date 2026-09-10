@@ -13,51 +13,63 @@ let binary_bp op =
     | Add | Sub                         -> Some (17, 18)
     | Mul | Div | Mod                   -> Some (19, 20)
 
+let is_binary_op tok_kind =
+    match tok_kind with
+    | Plus | Minus | Star | Slash | Percent | EqualEqual | ExclaimEqual | Less | LessEqual | Greater | GreaterEqual | AmpAmp | PipePipe | Amp | Pipe | Caret | LessLess | GreaterGreater 
+        -> true
+    | _ -> false
+
 let to_binary_op tok_kind =
     match tok_kind with
     (* Arithmetic *)
-    | Plus              -> Some Add
-    | Minus             -> Some Sub
-    | Star              -> Some Mul
-    | Slash             -> Some Div
-    | Percent           -> Some Mod
+    | Plus              -> Add
+    | Minus             -> Sub
+    | Star              -> Mul
+    | Slash             -> Div
+    | Percent           -> Mod
     (* Comparison *)
-    | EqualEqual        -> Some Eq
-    | ExclaimEqual      -> Some Neq
-    | Less              -> Some Lt
-    | LessEqual         -> Some Lte
-    | Greater           -> Some Gt
-    | GreaterEqual      -> Some Gte
+    | EqualEqual        -> Eq
+    | ExclaimEqual      -> Neq
+    | Less              -> Lt
+    | LessEqual         -> Lte
+    | Greater           -> Gt
+    | GreaterEqual      -> Gte
     (* Logical *)
-    | AmpAmp            -> Some And
-    | PipePipe          -> Some Or
+    | AmpAmp            -> And
+    | PipePipe          -> Or
     (* Bitwise *)
-    | Amp               -> Some BitAnd
-    | Pipe              -> Some BitOr
-    | Caret             -> Some BitXor
-    | LessLess          -> Some Shl (* Shift left *)
-    | GreaterGreater    -> Some Shr (* Shift right *)
-    | _                 -> None
+    | Amp               -> BitAnd
+    | Pipe              -> BitOr
+    | Caret             -> BitXor
+    | LessLess          -> Shl (* Shift left *)
+    | GreaterGreater    -> Shr (* Shift right *)
+    | _                 -> failwith "should not reach this place if used in conjunction with is_binary_op"
 
 let assign_bp op = 
     match op with
     | EqAssign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | AndAssign | OrAssign | XorAssign | ShlAssign | ShrAssign 
     -> Some (2, 1) (* format = (left binding power, right binding power) *)
 
+let is_assign_op tok_kind =
+    match tok_kind with
+    | Equal | PlusEqual | MinusEqual | StarEqual | SlashEqual | PercentEqual | AmpEqual | PipeEqual | CaretEqual | LessLessEqual | GreaterGreaterEqual
+        -> true
+    | _ -> false
+
 let to_assign_op tok_kind =
     match tok_kind with
-    | Equal                 -> Some EqAssign
-    | PlusEqual             -> Some AddAssign
-    | MinusEqual            -> Some SubAssign
-    | StarEqual             -> Some MulAssign
-    | SlashEqual            -> Some DivAssign
-    | PercentEqual          -> Some ModAssign
-    | AmpEqual              -> Some AndAssign
-    | PipeEqual             -> Some OrAssign
-    | CaretEqual            -> Some XorAssign
-    | LessLessEqual         -> Some ShlAssign
-    | GreaterGreaterEqual   -> Some ShrAssign
-    | _                     -> None
+    | Equal                 -> EqAssign
+    | PlusEqual             -> AddAssign
+    | MinusEqual            -> SubAssign
+    | StarEqual             -> MulAssign
+    | SlashEqual            -> DivAssign
+    | PercentEqual          -> ModAssign
+    | AmpEqual              -> AndAssign
+    | PipeEqual             -> OrAssign
+    | CaretEqual            -> XorAssign
+    | LessLessEqual         -> ShlAssign
+    | GreaterGreaterEqual   -> ShrAssign
+    | _                     -> failwith "should not reach this place if used in conjunction with is_assign_op"
 
 let prefix_bp op =
     match op with 
