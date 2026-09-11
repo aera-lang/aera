@@ -1,5 +1,6 @@
 open Position
 
+(* TODO: Testing this out *)
 type error = { 
     pos: position;
     msg: string;
