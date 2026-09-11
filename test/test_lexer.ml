@@ -345,7 +345,7 @@ fn sum(num: int64) -> int64 {
 |} in
     let tokens = lex_string input in 
     Test_lexer_helper.expect_tokens tokens [
-        (* main function *)
+        (* Main function *)
         fn 0 2;
         identifier 3 7;
         left_paren 7 8;
@@ -364,7 +364,7 @@ fn sum(num: int64) -> int64 {
         right_paren 46 47;
         right_brace 48 49;
 
-        (* sum function *)
+        (* Sum function *)
         fn 51 53;
         identifier 54 57;
         left_paren 57 58;

@@ -35,7 +35,13 @@ let is_alpha c =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
 let is_alnum c =
-    is_alpha c || is_digit c || c = '_'
+    is_alpha c || is_digit c
+
+let is_identifier_start c = 
+    is_alpha c || c = '_'
+
+let is_identifier_char c = 
+    is_identifier_start c || is_digit c
 
 let is_symbol c =
     (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~')
@@ -271,7 +277,7 @@ let read_decimal_number lex =
 
 let rec read_identifier_helper lex =
      match peek lex with
-    | Some c when is_alnum c ->
+    | Some c when is_identifier_char c ->
         let (_, lex') = advance lex in
         read_identifier_helper lex'
     | _ -> Ok lex
@@ -314,8 +320,7 @@ let read_identifier lex =
     (* Other Keywords *)
     | "as"          -> lex' |> add_token As
     (* Identifier *)
-    | _             -> lex' |> add_token Identifier 
-    (* TODO(lexer): Update function to actually represent the format of an identifier: identifier = ( alpha | "_" ) { ( alpha | digit | "_" ) } ; *)
+    | _             -> lex' |> add_token Identifier
 
 let read_number lex c = 
     if c = '0' then
@@ -441,7 +446,7 @@ let read_token lex =
             | Ok lex -> lex
             | Error (msg, lex) -> lex |> report_error msg
         end
-    | c when is_alpha c -> 
+    | c when is_identifier_start c -> 
         begin
             match read_identifier lex with
             | Ok lex -> lex

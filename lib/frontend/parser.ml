@@ -196,6 +196,13 @@ and get_identifier par =
 
 (* Struct *)
 
+(* and parse_struct_expr par = 
+    let ident = get_identifier par in 
+
+and parse_field_expr = 
+
+*)
+
 (* 
 
 struct_expression = identifier "{" { field_expression } "}" ;
