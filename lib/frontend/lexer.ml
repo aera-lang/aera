@@ -314,7 +314,7 @@ let read_identifier lex =
     (* Other Keywords *)
     | "as"          -> lex' |> add_token As
     (* Identifier *)
-    | _             -> lex' |> add_token Identifier
+    | _             -> lex' |> add_token Identifier (* TODO(lexer): Update function to actually represent the format of an identifier: identifier = ( alpha | "_" ) { ( alpha | digit | "_" ) } ; *)
 
 let read_number lex c = 
     if c = '0' then

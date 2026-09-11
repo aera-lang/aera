@@ -88,7 +88,7 @@ and const_item = {
 
 and expr =
 | Literal           of literal
-| Identifier        of identifier
+| Ident             of identifier
 | Grouping          of expr
 | Call              of { callee: expr; args: expr list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }

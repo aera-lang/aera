@@ -87,8 +87,10 @@ let parse_string tok par =
 
 let parse_bool value par = (Literal (BoolLiteral value), par)
 
-let parse_identifier tok par =
-    let value = lexeme tok par in (Ast.Identifier value, par)
+(* Identifier *)
+
+let parse_ident tok par =
+    let value = lexeme tok par in (Ident value, par)
 
 (* Unary - Prefix *)
 
@@ -176,6 +178,22 @@ and parse_array_expr par =
     let (_, par') = next par in (* consume '[' token *)
     let (rest, par'') = par' |> parse_expr_list RightBracket [] in (ArrayExpr rest, par'')
 
+
+(* Get Identifier *)
+
+and get_identifier par =
+    let tok = peek par in 
+    match tok.kind with  (*  { ... }*)
+    | Identifier     -> let value = lexeme tok par in 
+                        let (_, par') = next par in 
+                        (value, par')     
+    | _              -> 
+        let par' = match tok.kind with 
+        | Illegal       -> let (_, par'') = next par in par'' 
+        | _             -> par |> report_error "expected identifier" tok
+        in
+        ("<missing>", par')
+
 (* Struct *)
 
 (* 
@@ -184,10 +202,11 @@ struct_expression = identifier "{" { field_expression } "}" ;
 field_expression = identifier ":" expression ;
 *)
 
-(* and parse_struct_expr lhs par = 
+and parse_struct_expr lhs par = ()
 
 
-*) 
+
+
 (* Expression Without Block *)
 
 and expr_bp min_bp par = 
@@ -200,7 +219,7 @@ and expr_bp min_bp par =
     | StringLiteral             -> par' |> parse_string tok
     | True                      -> par' |> parse_bool true
     | False                     -> par' |> parse_bool false
-    | Identifier                -> par' |> parse_identifier tok
+    | Identifier                -> par' |> parse_ident tok
     (* Prefix Operators *)
     | Minus                     -> par' |> parse_prefix Neg
     | Exclaim                   -> par' |> parse_prefix Not
