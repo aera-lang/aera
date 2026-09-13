@@ -99,6 +99,24 @@ let rec parse_prefix op par =
 
 (* Grouping & Tuples *)
 
+and parse_expr_list closing_kind args par =
+    let tok = peek par in 
+    if tok.kind = closing_kind then 
+        let (_, par') = next par in (List.rev args, par')
+    else
+        let (arg, par') = par |> expr_bp 0 (* change to expr *) in 
+        let args' = (arg :: args) in 
+        let tok = peek par' in 
+        if tok.kind = Comma then 
+             let (_, par'') = next par' in par'' |> parse_expr_list closing_kind args'
+        else if tok.kind = closing_kind then 
+            par' |> parse_expr_list closing_kind args'
+        else
+            let par'' = report_error 
+            (Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind)) 
+            tok par' 
+            in (List.rev args, par'')
+
 and parse_paren_expr par =
     let (first, par') = par |> expr_bp 0 in 
     let tok = peek par' in 
@@ -126,25 +144,37 @@ and parse_unrecognized tok par =
 
 and parse_call lhs par =
     let (_, par') = next par in 
-    let (args, par'') = par' |>  parse_expr_list RightParen [] in
+    let (args, par'') = par' |> parse_args_list [] in
     (Call {callee = lhs; args = args}, par'')
 
-and parse_expr_list closing_kind args par =
+and parse_arg par =
     let tok = peek par in 
-    if tok.kind = closing_kind then 
+    let next_tok = peek_next par in 
+    match tok.kind, next_tok.kind with 
+    | Identifier, Colon  -> 
+        let name = lexeme tok par in 
+        let (_, par') = next par in (* consume identifier *)
+        let (_, par'') = next par' in (* consume : *)
+        let (value, par''') = par'' |> expr_bp 0 (* change to expr *) in
+                                (Named {name = name; value = value}, par''')
+    | _ ->
+        let (value, par') = par |> expr_bp 0 (* change to expr *) in
+        (Positional value, par')
+
+and parse_args_list args par =
+    let tok = peek par in 
+    if tok.kind = RightParen then 
         let (_, par') = next par in (List.rev args, par')
     else
-        let (arg, par') = par |> expr_bp 0 (* change to expr *) in 
-        let args' = (arg :: args) in 
+        let (arg, par') = par |> parse_arg in 
+        let args' = arg :: args in 
         let tok = peek par' in 
         if tok.kind = Comma then 
-             let (_, par'') = next par' in par'' |> parse_expr_list closing_kind args'
-        else if tok.kind = closing_kind then 
-            par' |> parse_expr_list closing_kind args'
+             let (_, par'') = next par' in par'' |> parse_args_list args'
+        else if tok.kind = RightParen then 
+            par' |> parse_args_list args'
         else
-            let par'' = report_error 
-            (Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind)) 
-            tok par' 
+            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
             in (List.rev args, par'')
                            
 (* Binary & Assign *)
@@ -173,17 +203,17 @@ and parse_assign op lhs min_bp par =
             let (lhs'', par''') = par'' |> loop lhs' min_bp in 
             (lhs'', par''')
 
-(* Array *)
+(* Array Expression *)
+
 and parse_array_expr par =
     let (_, par') = next par in (* consume '[' token *)
     let (rest, par'') = par' |> parse_expr_list RightBracket [] in (ArrayExpr rest, par'')
-
 
 (* Get Identifier *)
 
 and get_identifier par =
     let tok = peek par in 
-    match tok.kind with  (*  { ... }*)
+    match tok.kind with
     | Identifier     -> let value = lexeme tok par in 
                         let (_, par') = next par in 
                         (value, par')     
@@ -194,14 +224,51 @@ and get_identifier par =
         in
         ("<missing>", par')
 
-(* Struct *)
+(* Struct Expression *)
 
 (* and parse_struct_expr par = 
-    let ident = get_identifier par in 
+    let (ident, par') = get_identifier par in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | LeftBrace         -> let (_, par'') = next par' in 
+                           let (fields, par''') = par'' |> parse_fields [] in 
+                           (StructExpr { name = ident; fields = fields; }, par''')
+    | _                 -> let par'' = report_error "expected '{' after struct expression name" tok par 
+                           in (ErrorExpr tok.span, par'') (* we expect a } to close, so an ErrorExpr? 
+                                                do we need to do error recovery? *)
+        
+        (* do we have an invalid Struct? if so, is this where we recover? *)
 
-and parse_field_expr = 
+and parse_fields fields par =
+    let tok = peek par in 
+    match tok.kind with 
+    | Identifier -> 
+        let (ident, par') = get_identifier par in
+        let tok = peek par' in 
+        begin
+            match tok.kind with 
+            | Colon      -> let (_, par'') = next par in 
+                            let (field, par''') = expr par'' in 
+                            let fields' = (ident, field) :: fields in 
+                            par''' |> parse_fields fields'
+            | _          -> let par'' = report_error "expected ':' after field name" tok par
+                            (* what's next? adding an ident errorexpr pair and then calling parse fields? or error recovering/*)
 
-*)
+                 (* is this an error? We have a valid name, this isn't a valid form of a struct expression, should this be an ErrorExpr?
+                        e.g., seeing something like Person { name 32 }, we need a colon. Then the thing is, do we need to do error recovery? 
+                             I feel like we need to *)
+        end
+    | RightBrace -> let (_, par') = next par (* consume } token *)
+                        in (List.rev fields, par')
+    | _          -> let par'' = report_error "expected '}' after field expression" tok par 
+                in (ErrorExpr tok.span, par'') (* we expect a } to close, so an ErrorExpr? 
+                                                same question as above, do we need to do error recovery? *)
+
+                                                *)
+
+        
+    
+(* Person { name: "Alice" age: 30 } *)
 
 (* 
 
@@ -249,8 +316,6 @@ and loop lhs min_bp par =
     | op when is_assign_op tok.kind     -> par |> parse_assign (to_assign_op tok.kind) lhs min_bp
     (* Array *)
     | LeftBracket                       -> par |> parse_array_expr
-    (* Struct *)
-    | LeftBrace                         -> par |> parse_struct_expr lhs
     | _                                 -> (lhs, par)
 
 (* Expression With Block *)

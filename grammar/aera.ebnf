@@ -123,8 +123,11 @@ negation_expression = "-" expression
             | "!" expression ;
 
 grouped_expression = "(" expression ")" ;
-call_expression = expression "(" [ expression_list ] ")" ;
-expression_list = expression { ","  expression } ;
+call_expression = expression "(" [ argument_list ] ")" ;
+
+argument_list = argument { ","  argument } ;
+argument = [ identifier ":" ] expression ; 
+
 break_expression = "break" [ expression ] ;
 return_expression = "return" [ expression ] ;
 
@@ -132,9 +135,9 @@ array_expression = "[" expression_list "]" ;
 tuple_expression = "(" tuple_expression_list ")" ;
 tuple_expression_list = expression "," [ expression_list ] ;
 
-struct_expression = identifier "{" { field_expression } "}" ;
-field_expression = identifier ":" expression ;
+expression_list = expression { ","  expression } ;
 
+struct_expression = call_expression ;
 variant_expression = call_expression ;
 
 statement = item

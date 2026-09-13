@@ -90,7 +90,7 @@ and expr =
 | Literal           of literal
 | Ident             of identifier
 | Grouping          of expr
-| Call              of { callee: expr; args: expr list }
+| Call              of { callee: expr; args: argument list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
 | Assign            of { lhs: expr; op: assign_op; rhs: expr }
 | Unary             of { op: unary_op; rhs: expr }
@@ -105,6 +105,10 @@ and expr =
 | TupleExpr         of expr list
 | StructExpr        of { name: identifier; fields: (identifier * expr) list }
 | ErrorExpr         of Span.t
+
+and argument = 
+| Positional of expr 
+| Named of { name: identifier; value: expr; }
 
 and block = {
     stmts: stmt list;
