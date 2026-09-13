@@ -224,63 +224,6 @@ and get_identifier par =
         in
         ("<missing>", par')
 
-(* Struct Expression *)
-
-(* and parse_struct_expr par = 
-    let (ident, par') = get_identifier par in 
-    let tok = peek par' in 
-    match tok.kind with 
-    | LeftBrace         -> let (_, par'') = next par' in 
-                           let (fields, par''') = par'' |> parse_fields [] in 
-                           (StructExpr { name = ident; fields = fields; }, par''')
-    | _                 -> let par'' = report_error "expected '{' after struct expression name" tok par 
-                           in (ErrorExpr tok.span, par'') (* we expect a } to close, so an ErrorExpr? 
-                                                do we need to do error recovery? *)
-        
-        (* do we have an invalid Struct? if so, is this where we recover? *)
-
-and parse_fields fields par =
-    let tok = peek par in 
-    match tok.kind with 
-    | Identifier -> 
-        let (ident, par') = get_identifier par in
-        let tok = peek par' in 
-        begin
-            match tok.kind with 
-            | Colon      -> let (_, par'') = next par in 
-                            let (field, par''') = expr par'' in 
-                            let fields' = (ident, field) :: fields in 
-                            par''' |> parse_fields fields'
-            | _          -> let par'' = report_error "expected ':' after field name" tok par
-                            (* what's next? adding an ident errorexpr pair and then calling parse fields? or error recovering/*)
-
-                 (* is this an error? We have a valid name, this isn't a valid form of a struct expression, should this be an ErrorExpr?
-                        e.g., seeing something like Person { name 32 }, we need a colon. Then the thing is, do we need to do error recovery? 
-                             I feel like we need to *)
-        end
-    | RightBrace -> let (_, par') = next par (* consume } token *)
-                        in (List.rev fields, par')
-    | _          -> let par'' = report_error "expected '}' after field expression" tok par 
-                in (ErrorExpr tok.span, par'') (* we expect a } to close, so an ErrorExpr? 
-                                                same question as above, do we need to do error recovery? *)
-
-                                                *)
-
-        
-    
-(* Person { name: "Alice" age: 30 } *)
-
-(* 
-
-struct_expression = identifier "{" { field_expression } "}" ;
-field_expression = identifier ":" expression ;
-*)
-
-and parse_struct_expr lhs par = ()
-
-
-
-
 (* Expression Without Block *)
 
 and expr_bp min_bp par = 
@@ -332,3 +275,20 @@ and expr par =
 
 (* If Expr *)
 
+(* Break Expr *)
+
+and break_expr par = 
+    match (peek par).kind with 
+    | RightBrace | EOF -> (BreakExpr None, par)
+    | _ ->
+        let (value, par') = expr par in 
+        (BreakExpr (Some value), par')
+
+(* Return Expr *)
+
+and return_expr par = 
+    match (peek par).kind with 
+    | RightBrace | EOF -> (ReturnExpr None, par)
+    | _ -> 
+        let (value, par') = expr par in 
+        (ReturnExpr (Some value), par')
