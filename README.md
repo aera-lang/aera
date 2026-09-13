@@ -79,7 +79,7 @@ Or just double-click it in File Explorer.
 
 ## Documentation
 
-For complete language documentation, view the ([`Atlas`](https://aera.codes/atlas)) at Aera's website.
+For complete language documentation, view the ([`Atlas`](https://aera.foo/atlas)) at Aera's website.
 
 ## License
 
