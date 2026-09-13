@@ -112,7 +112,7 @@ and argument =
 
 and block = {
     stmts: stmt list;
-    expr: expr; 
+    expr: expr option; 
 }
 
 and pattern = 

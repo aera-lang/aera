@@ -5,7 +5,7 @@ type identifier = string
 
 type t = 
 | PrimitiveType of primitive_type
-| ArrayType of t * Int64.t
+| ArrayType of t * array_size
 | TupleType of t list
 | UserType of identifier (* covers primitive types alongside user-defined types *)
 | ErrorType of Span.t 
@@ -16,37 +16,27 @@ and primitive_type =
 | Float32 | Float64
 | Char | String | Bool | Unit
 
-let is_primitive s =
-    match s with 
-    (* Integers *)
-    | "int8" | "int16" | "int32" | "int64" -> true
-    | "uint8" | "uint16" | "uint32" | "uint64" -> true
-    (* Floats *)
-    | "float32" | "float64" -> true
-    (* Char *)
-    | "char" -> true
-    (* String *)
-    | "string" -> true
-    (* Bool *)
-    | "bool" -> true 
-    (* Unit *)
-    | "unit" -> true
-    | _ -> false
+and array_size =
+| Known of Int64.t
+| Unknown
 
-let to_primitive s = 
+let get_primitive_typ s = 
     match s with 
-    | "int8" -> Int8
-    | "int16" -> Int16
-    | "int32" -> Int32
-    | "int64" -> Int64
-    | "uint8" -> Uint8
-    | "uint16" -> Uint16
-    | "uint32" -> Uint32
-    | "uint64" -> Uint64
-    | "float32" -> Float32
-    | "float64" -> Float64
-    | "char" -> Char
-    | "string" -> String 
-    | "bool" -> Bool
-    | "unit" -> Unit
-    | _ -> failwith "not a primitive type" (* when used in conjunction with is_primitive, this match case is never reached *)
+    | "int8" -> Some Int8
+    | "int16" -> Some Int16
+    | "int32" -> Some Int32
+    | "int64" -> Some Int64
+    | "uint8" -> Some Uint8
+    | "uint16" -> Some Uint16
+    | "uint32" -> Some Uint32
+    | "uint64" -> Some Uint64
+    | "float32" -> Some Float32
+    | "float64" -> Some Float64
+    | "char" -> Some Char
+    | "string" -> Some String 
+    | "bool" -> Some Bool
+    | "unit" -> Some Unit
+    | _ -> None
+
+
+

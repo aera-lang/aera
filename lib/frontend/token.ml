@@ -15,7 +15,6 @@ type token_kind =
 | Fn
 | Let
 | Var
-| Mut
 | Const
 | Return
 (* If / Loop / Match Keywords *)
