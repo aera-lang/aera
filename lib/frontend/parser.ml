@@ -111,19 +111,21 @@ let rec parse_prefix op par =
 and parse_expr_list closing_kind args par =
     let tok = peek par in 
     if tok.kind = closing_kind then 
-        let (_, par') = next par in (List.rev args, par')
+        let par' = advance par in (List.rev args, par')
     else
         let (arg, par') = par |> expr_bp 0 (* change to expr *) in 
         let args' = (arg :: args) in 
-        let tok = peek par' in 
-        if tok.kind = Comma then 
-             let (_, par'') = next par' in par'' |> parse_expr_list closing_kind args'
-        else if tok.kind = closing_kind then 
+        let tok' = peek par' in 
+
+        if tok'.kind = Comma then 
+            let par'' = advance par' in 
+            par'' |> parse_expr_list closing_kind args'
+        else if tok'.kind = closing_kind then 
             par' |> parse_expr_list closing_kind args'
         else
             let par'' = report_error 
             (Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind)) 
-            tok par' 
+            tok' par' 
             in (List.rev args, par'')
 
 and parse_paren_expr par =
@@ -135,7 +137,8 @@ and parse_paren_expr par =
     | _          -> let par'' = report_error "expected ')' to close grouping" tok par' 
                     in (Grouping first, par'') (* still have a valid grouping, just not closed properly *)
 and parse_tuple_expr first par =
-    let (rest, par') = par |> parse_expr_list RightParen [] in (TupleExpr (first ::rest), par')
+    let (rest, par') = par |> parse_expr_list RightParen [] in 
+    (TupleExpr (first ::rest), par')
 
 (* -------------------- Unrecognized Tokens -------------------- *)
 
@@ -163,7 +166,7 @@ and parse_arg par =
     | Identifier, Colon  -> 
         let name = lexeme tok par in 
         let par' = advance par in (* consume identifier *)
-        let par'' = advance par' in (* consume : *)
+        let par'' = advance par' in (* consume ':' *)
         let (value, par''') = par'' |> expr_bp 0 (* change to expr *) in
                                 (Named {name = name; value = value}, par''')
     | _ ->
@@ -348,8 +351,13 @@ and match_cases cases par = []
 
 and match_case par = ()
 
-(* -------------------- Patterns -------------------- *)
+(* 
 
+match_case = pattern "=>" expression ;
+
+*)
+
+(* -------------------- Patterns -------------------- *)
 
 and pattern par =
     let (tok, par') = next par in 
@@ -380,7 +388,7 @@ and pattern par =
             match tok'.kind with 
             | LeftBrace -> 
                 let par'' = advance par' in par'' |> parse_variant_pattern
-            LeftParen -> 
+            | LeftParen -> 
                 let par'' = advance par' in par'' |> parse_struct_pattern
             | _ ->  let (value, par'') = par' |> parse_ident_pattern tok in 
                     (value, par'')
@@ -429,18 +437,9 @@ and parse_bool_pattern value par = (LiteralPattern (BoolLiteral value), par)
 and parse_ident_pattern tok par =
     let value = lexeme tok par in (IdentPattern value, par)
 
+    
+
 (* 
-
-match_expression = "match" expression "{" match_case { match_case } "}" ;
-match_case = pattern "=>" expression ;
-
-pattern = literal
-        | identifier
-        | underscore
-        | array_pattern
-        | tuple_pattern
-        | struct_pattern
-        | variant_pattern ;
 
 pattern_list = pattern { ","  pattern } ;
 
@@ -477,50 +476,147 @@ and return_expr par =
 
 (* -------------------- Types -------------------- *)
 
-and parse_typ par = ()
+and parse_typ par = 
+    let tok = peek par in 
+    match tok.kind with 
+    | LeftBracket -> let par' = advance par in par' |> parse_fixed_array_typ
+    | LeftParen   -> let par' = advance par in par' |> parse_tuple_typ
+    | Identifier  ->
+        let (name, par') = get_identifier par in 
+        begin
+            match get_primitive_typ name with 
+            | Some typ -> (PrimitiveType typ, par')
+            | None     -> (UserType name, par')
+        end
+    | _ -> 
+        if tok.kind <> Illegal then
+            let par' = report_error "not a valid type" tok par in 
+            (ErrorType tok.span, par')
+        else
+            let par' = advance par in 
+            (ErrorType tok.span, par')
 
-and parse_fixed_array_typ par = ()
+(* -------------------- Fixed Array Type -------------------- *)
 
-and parse_tuple_type par = ()
+and parse_fixed_array_typ par =
+    let (typ, par') = par |> parse_typ in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | Comma -> 
+        let par'' = advance par' in
+        par'' |> parse_array_size typ
+    | _ -> 
+        let par'' = report_error "expected ',' after array element type" tok par' in 
+        (ArrayType (typ, Unknown), par'')
 
-(* -------------------- Statements -------------------- *)
+and parse_array_size typ par =
+    let tok = peek par in 
+    match tok.kind with 
+    | IntLiteral ->
+        par |> parse_size_and_closing typ tok
+    | _ -> 
+        let par' = report_error "expected array size" tok par in 
+        (ArrayType (typ, Unknown), par')
+        
+and parse_size_and_closing typ tok par =
+    match Int64.of_string_opt (lexeme tok par) with
+    | Some size -> 
+        let par' = advance par in 
+        let tok = peek par' in 
+        begin
+            match tok.kind with
+            | RightBracket ->
+                let par'' = advance par' in
+                (ArrayType (typ, Known size), par'')
+            | _ ->
+                let par'' = report_error "expected ']' to close array type" tok par' in 
+                (ArrayType (typ, Known size), par'')
+        end
+    | None          -> let par' = report_error "could not parse array size" tok par 
+                       in (ErrorType tok.span, par')
+
+(* -------------------- Tuple Type -------------------- *)
+
+and parse_tuple_typ par = 
+    let (typ, par') = par |> parse_typ in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | Comma -> 
+        let par'' = advance par' in
+        let (rest, par''') = par'' |> parse_type_list [] in 
+        (TupleType (typ :: rest), par''')
+    | _ -> 
+        let par'' = report_error "expected ',' after tuple element type" tok par' in 
+        (TupleType [typ], par'')
+
+and parse_type_list types par =
+    let tok = peek par in 
+    if tok.kind = RightParen then 
+        let par' = advance par in (List.rev types, par')
+    else
+        let (typ, par') = par |> parse_typ in 
+        let types' = (typ :: types) in 
+        let tok' = peek par' in 
+        
+        if tok'.kind = Comma then 
+            let par'' = advance par' in 
+            par'' |> parse_type_list types'
+        else if tok'.kind = RightParen then 
+            par' |> parse_type_list types'
+        else
+            let par'' = report_error "expected ',' or ')' after type" tok' par' 
+            in (List.rev types, par'')
+
+(* -------------------- Let Statement  -------------------- *)
 
 and let_stmt par = 
     let (name, par') = get_identifier par in 
     let tok = peek par' in 
-    let next_tok = peek_next par' in 
-    match tok.kind, next_tok.kind with 
-    | Identifier, Colon -> 
-        (* get type *)
-        let typ = lexeme tok par' in  (* NEEDS TO BE THE TYPE *)
-        let (_, par'') = next par' in (* consume identifier *)
-        let (_, par''') = next par'' in (* consume : *)
-        let (value, par'''') = par''' |> expr_bp 0 (* change to expr *) in
-        (LetStmt {name = name; typ = Some typ; expr = value}, par'''')
-    | Equal ->
-        let (_, par'') = next par' in (* consume = *)
-        let (value, par'''') = par''' |> expr_bp 0 (* change to expr *) in
-        (LetStmt {name = name; typ = None; expr = value}, par'''')       
+    let (typ, par'') =  
+        if tok.kind = Colon then 
+            let par'' = advance par' in (* consume : *)
+            let (typ, par''') = par'' |> parse_typ in (* consume typ *)
+            (Some typ, par''')
+        else
+            (None, par')
+    in
+    let (_, par''') = next par'' in (* consume = *)
+    let (value, par'''') = par''' |> expr in
+    (LetStmt {name = name; typ = typ; expr = value}, par'''')  
 
-(* var stmt would be similar *)
-and var_stmt par = ()
+(* -------------------- Var (Mutable) Statement -------------------- *)
 
+and var_stmt par = 
+    let (name, par') = get_identifier par in 
+    let tok = peek par' in 
+    let (typ, par'') =  
+        if tok.kind = Colon then 
+            let par'' = advance par' in (* consume : *)
+            let (typ, par''') = par'' |> parse_typ in (* consume typ *)
+            (Some typ, par''')
+        else
+            (None, par')
+    in
+    let (_, par''') = next par'' in (* consume = *)
+    let (value, par'''') = par''' |> expr in
+    (VarStmt {name = name; typ = typ; expr = value}, par'''')  
+
+(* -------------------- Statement -------------------- *)
 
 and stmt par = 
     let tok = peek par in 
     match tok.kind with 
-    (*| Fn | Struct | Variant -> expr par (* CHANGE TO ITEM ACTUALLY *)
-    | Let    -> 
-        let (_, par') = next par in 
-        let (let_stmt, par'') = let_stmt in 
-        (let_stmt, par'')
-    | Var    -> 
-        let (_, par') = next par in 
-        let (var_stmt, par'') = var_stmt in 
-        (var_stmt, par'') *)
+    (*| Fn | Struct | Variant -> expr par (* CHANGE TO ITEM ACTUALLY *)*)
+    | Let -> 
+        let par' = advance par in 
+        par' |> let_stmt
+    | Var ->
+        let par' = advance par in 
+        par' |> var_stmt
     | _      -> 
         let (expr_stmt, par') = expr par in 
         (ExprStmt expr_stmt, par')
 
 
 (* -------------------- Items -------------------- *)
+
