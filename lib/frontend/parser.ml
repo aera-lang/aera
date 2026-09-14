@@ -279,6 +279,7 @@ and expr par =
     | If        -> let par' = advance par in par' |> if_expr
     | While     -> let par' = advance par in par' |> while_expr 
     | Loop      -> let par' = advance par in par' |> loop_expr
+    | Match     -> let par' = advance par in par' |> match_expr
     | Break     -> let par' = advance par in par' |> break_expr
     | Return    -> let par' = advance par in par' |> return_expr
     | _         -> par |> expr_bp 0 (* expression without block *)
@@ -306,7 +307,7 @@ and block par =
                     let (stmts, expr_opt, par'') = par' |> parse_block [] in 
                     (Block {stmts = stmts; expr = expr_opt}, par'')
     | _  -> let par' = report_error "expected { before block expression" tok par in 
-            (ErrorExpr tok.span, par') (* or error stmt? *)
+            (ErrorExpr tok.span, par') 
 
 (* -------------------- If Expression -------------------- *)
 
@@ -331,6 +332,130 @@ and while_expr par =
 and loop_expr par = 
     let (body, par') = block par in
     (InfiniteLoop body, par')
+
+(* -------------------- Match Expression -------------------- *)
+
+and match_expr par =
+    let (expr_, par') = expr par in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | LeftBrace -> let par'' = advance par' in par'' |> match_cases [] 
+    | _ -> let par' = report_error "expected { before match expression" tok par in 
+            (ErrorExpr tok.span, par') 
+
+
+and match_cases cases par = []
+
+and match_case par = ()
+
+(* -------------------- Patterns -------------------- *)
+
+
+and pattern par =
+    let (tok, par') = next par in 
+    match tok.kind with 
+    (* Literals *)
+    | IntLiteral -> 
+        let (value, par'') = par' |> parse_int_pattern tok in 
+        (value, par'')
+    | FloatLiteral -> 
+        let (value, par'') = par' |> parse_float_pattern tok in 
+        (value, par'')
+    | CharLiteral -> 
+        let (value, par'') = par' |> parse_char_pattern tok in 
+        (value, par'')
+    | StringLiteral ->
+        let (value, par'') = par' |> parse_string_pattern tok in 
+        (value, par'')
+    | True ->
+        let (value, par'') = par' |> parse_bool_pattern true in 
+        (value, par'')
+    | False ->
+        let (value, par'') = par' |> parse_bool_pattern false in 
+        (value, par'')
+    (* Identifier *)
+    | Identifier -> (* have to check for variant here *)
+        let tok' = peek par' in 
+        begin 
+            match tok'.kind with 
+            | LeftBrace -> 
+                let par'' = advance par' in par'' |> parse_variant_pattern
+            LeftParen -> 
+                let par'' = advance par' in par'' |> parse_struct_pattern
+            | _ ->  let (value, par'') = par' |> parse_ident_pattern tok in 
+                    (value, par'')
+        end
+    (* Wildcard *)
+    | Underscore ->
+        (WildcardPattern, par')
+    (* Array Pattern *)
+    | LeftBracket ->
+        let (value, par'') = par' |> parse_array_pattern in 
+        (value, par'')
+    (* Tuple Pattern *)
+    | LeftBrace ->
+        let (value, par'') = par' |> parse_array_pattern in 
+        (value, par'')
+    (* Invalid Pattern*)
+    | _ -> let par' = report_error "expected pattern in match case" tok par 
+                    in (ErrorPattern tok.span, par')
+
+(* -------------------- Literal Patterns -------------------- *)
+
+and parse_int_pattern tok par =
+    match Int64.of_string_opt (lexeme tok par) with
+    | Some value    -> (LiteralPattern (IntLiteral value), par)
+    | None          -> let par' = report_error "could not parse integer" tok par 
+                        in (ErrorPattern tok.span, par')
+
+and parse_float_pattern tok par = 
+    match float_of_string_opt (lexeme tok par) with
+    | Some value    -> (LiteralPattern (FloatLiteral value), par)
+    | None          -> let par' = report_error "could not parse float" tok par 
+                        in (ErrorPattern tok.span, par')
+
+and parse_char_pattern tok par =
+    match char_of_string (lexeme tok par) with
+    | Some value    -> (LiteralPattern (CharLiteral value), par)
+    | None          -> let par' = report_error "could not parse character" tok par 
+                        in (ErrorPattern tok.span, par')
+and parse_string_pattern tok par =
+    let value = lexeme tok par in (LiteralPattern (StringLiteral value), par)
+
+and parse_bool_pattern value par = (LiteralPattern (BoolLiteral value), par)
+
+(* -------------------- Identifier Pattern -------------------- *)
+
+and parse_ident_pattern tok par =
+    let value = lexeme tok par in (IdentPattern value, par)
+
+(* 
+
+match_expression = "match" expression "{" match_case { match_case } "}" ;
+match_case = pattern "=>" expression ;
+
+pattern = literal
+        | identifier
+        | underscore
+        | array_pattern
+        | tuple_pattern
+        | struct_pattern
+        | variant_pattern ;
+
+pattern_list = pattern { ","  pattern } ;
+
+array_pattern = "[" pattern_list "]" ;
+tuple_pattern = "(" tuple_pattern_list ")" ;
+tuple_pattern_list = pattern "," [ pattern_list ] ;
+
+struct_pattern = identifier "{" [ field_pattern_list ] "}" ;
+field_pattern_list = field_pattern { "," field_pattern } ;
+field_pattern = identifier [ ":" pattern ] ;
+
+variant_pattern = identifier "(" [ pattern_list ] ")" ;
+
+
+*)
 
 (* -------------------- Break Expression -------------------- *)
 

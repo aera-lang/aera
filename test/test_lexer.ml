@@ -73,17 +73,6 @@ let test_fn_item () =
         eof 31 31;
     ]
    
-let test_let_mut_binding () = 
-    let tokens = lex_string "let mut x = 3.14" in 
-    Test_lexer_helper.expect_tokens tokens [
-        let_ 0 3;
-        mut 4 7;
-        identifier 8 9;
-        equal 10 11;
-        float_lit 12 16;
-        eof 16 16;
-    ]
-
 (* Strings *)
 
 let test_empty_string () = 
@@ -376,7 +365,7 @@ fn sum(num: int64) -> int64 {
         identifier 73 78;
         left_brace 79 80;
         let_ 85 88;
-        mut 89 92;
+        mut 89 92; (* change test *)
         identifier 93 98;
         colon 98 99;
         identifier 100 105;
@@ -406,7 +395,6 @@ let tests = [
         Alcotest.test_case "while expression" `Quick test_while_expr;
         Alcotest.test_case "loop expression" `Quick test_loop_expr;
         Alcotest.test_case "fn item" `Quick test_fn_item;
-        Alcotest.test_case "let mut binding" `Quick test_let_mut_binding;
     ]);
     ("strings", [
         Alcotest.test_case "empty string" `Quick test_empty_string;

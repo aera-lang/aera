@@ -295,7 +295,6 @@ let read_identifier lex =
     | "fn"          -> lex' |> add_token Fn
     | "let"         -> lex' |> add_token Let
     | "var"         -> lex' |> add_token Var
-    | "mut"         -> lex' |> add_token Mut
     | "const"       -> lex' |> add_token Const
     | "return"      -> lex' |> add_token Return
     (* If / Loop / Match Keywords *)
@@ -352,6 +351,7 @@ let read_token lex =
     | ']' -> lex |> add_token RightBracket 
     | ',' -> lex |> add_token Comma
     | ':' -> lex |> add_token Colon
+    | '_' -> lex |> add_token Underscore
     | ' ' | '\r'  | '\t' | '\n' -> lex (* skip these characters *)
     (* Operators *)
     | '<' -> 

@@ -35,9 +35,8 @@ let token_to_string kind =
 	| Fn						-> "fn"
 	| Let						-> "let"
 	| In						-> "in"
-	| Mut                       -> "mut"
 	| Const                     -> "const"
-  	| Return                    -> "return"
+  | Return                    -> "return"
 	(* If / Loop / Match Keywords *)
 	| If                        -> "if"
 	| Else                      -> "else"
@@ -118,7 +117,6 @@ let false_lit start_ end_                      = make_token Token.True start_ en
 let fn start_ end_                             = make_token Token.Fn start_ end_
 let let_ start_ end_                           = make_token Token.Let start_ end_
 let in_ start_ end_                            = make_token Token.In start_ end_
-let mut start_ end_                            = make_token Token.Mut start_ end_
 let const start_ end_                          = make_token Token.Const start_ end_
 let return_ start_ end_                        = make_token Token.Return start_ end_
 (* If / Loop / Match Keywords *)

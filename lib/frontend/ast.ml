@@ -117,7 +117,7 @@ and block = {
 
 and pattern = 
 | LiteralPattern       of literal 
-| IdentifierPattern    of identifier
+| IdentPattern         of identifier
 | WildcardPattern
 | ArrayPattern         of pattern list
 | TuplePattern         of pattern list

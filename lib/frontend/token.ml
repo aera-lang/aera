@@ -86,6 +86,7 @@ type token_kind =
 | Less
 | Greater
 | Equal
+| Underscore
 (* Comments *)
 | LineComment  (* # *)
 (* Error *)
@@ -109,7 +110,6 @@ let tok_to_string kind =
     | Fn                -> "fn"
     | Let               -> "let"
     | Var               -> "var"
-    | Mut               -> "mut"
     | Const             -> "const"
     | Return            -> "return"
     (* If / Loop / Match Keywords *)
@@ -175,12 +175,13 @@ let tok_to_string kind =
     | Star               -> "*"
     | Slash              -> "/"
     | Percent            -> "%"
-    | Question            -> "?"
+    | Question           -> "?"
     | At                 -> "@"
-    | Exclaim             -> "!"
-    | Less                -> "<"
-    | Greater             -> ">"
-    | Equal               -> "="
+    | Exclaim            -> "!"
+    | Less               -> "<"
+    | Greater            -> ">"
+    | Equal              -> "="
+    | Underscore         -> "_"
     (* Comments *)
     | LineComment        -> "#"
     (* Error *)
