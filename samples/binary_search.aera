@@ -1,4 +1,4 @@
-fn binary_search(arr: [int64], target: int64) -> int64 {
+fn binary_search(arr: Arr!<int64>, target: int64) -> int64 {
     var left = 0
     var right = arr.len()
 

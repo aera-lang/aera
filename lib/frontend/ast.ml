@@ -53,26 +53,38 @@ and item =
 | ConstItem of const_item
 | ErrorItem of Span.t
 
+
 and fn_item = {
     name: identifier;
-    params: (identifier * typ option) list;
-    return_type: typ option; (* if omitted, return unit type *)
+    params: param list;
+    return_type: typ option; (* if omitted, infer *)
     body: expr;
 }
 
 and closure_item = {
-    params: (identifier * typ option) list;
-    return_type: typ option; (* if omitted, return unit type *)
+    params: param list;
     body: expr;
+}
+
+and param = {
+    param_name: identifier;
+    param_typ: typ option;
 }
 
 and struct_item = {
     name: identifier;
-    fields: (identifier * typ) list;
+    fields: field list;
 }
 
+and field = {
+    field_name: identifier;
+    field_typ: typ;
+    expr: expr option; 
+}
+
+(* TODO(ast): Fix the variant case! It isn't correct at all, both in the grammar and the ast. *)
 and variant_case = identifier * (identifier * typ) list (* if the list is empty, the variant carries nothing *)
-                                                   
+            
 and variant_item = {
     name: identifier;
     cases: variant_case list;

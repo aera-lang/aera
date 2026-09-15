@@ -56,16 +56,6 @@ let char_of_string s =
     else
         None
 
-let is_item_keyword kind =
-    match kind with 
-    | Fn | Struct | Variant -> true 
-    | _                     -> false
-
-let is_stmt_keyword kind = 
-    match kind with 
-    | Let | Var -> true
-    | _         -> is_item_keyword kind
-
 (* -------------------- Error Recovery / Handling -------------------- *)
 
 let report_error msg tok par = 
@@ -227,11 +217,11 @@ and get_identifier par =
     let tok = peek par in 
     match tok.kind with
     | Identifier     -> let value = lexeme tok par in 
-                        let (_, par') = next par in 
+                        let par' = advance par in 
                         (value, par')     
     | _              -> 
         let par' = match tok.kind with 
-        | Illegal       -> let (_, par'') = next par in par'' 
+        | Illegal       -> let par'' = advance par in par'' 
         | _             -> par |> report_error "expected identifier" tok
         in
         ("<missing>", par')
@@ -282,7 +272,7 @@ and expr par =
     | If        -> let par' = advance par in par' |> if_expr
     | While     -> let par' = advance par in par' |> while_expr 
     | Loop      -> let par' = advance par in par' |> loop_expr
-    | Match     -> let par' = advance par in par' |> match_expr
+    (*| Match     -> let par' = advance par in par' |> match_expr*)
     | Break     -> let par' = advance par in par' |> break_expr
     | Return    -> let par' = advance par in par' |> return_expr
     | _         -> par |> expr_bp 0 (* expression without block *)
@@ -338,7 +328,7 @@ and loop_expr par =
 
 (* -------------------- Match Expression -------------------- *)
 
-and match_expr par =
+(*and match_expr par =
     let (expr_, par') = expr par in 
     let tok = peek par' in 
     match tok.kind with 
@@ -453,6 +443,8 @@ field_pattern = identifier [ ":" pattern ] ;
 
 variant_pattern = identifier "(" [ pattern_list ] ")" ;
 
+
+*)
 
 *)
 
@@ -606,17 +598,198 @@ and var_stmt par =
 and stmt par = 
     let tok = peek par in 
     match tok.kind with 
-    (*| Fn | Struct | Variant -> expr par (* CHANGE TO ITEM ACTUALLY *)*)
-    | Let -> 
-        let par' = advance par in 
-        par' |> let_stmt
-    | Var ->
-        let par' = advance par in 
-        par' |> var_stmt
-    | _      -> 
+    | Fn | Struct | Variant -> 
+        let (item_stmt, par') = item par in
+        (Item item_stmt, par')
+    | Let -> let_stmt (advance par)
+    | Var -> var_stmt (advance par)
+    | _   -> 
         let (expr_stmt, par') = expr par in 
         (ExprStmt expr_stmt, par')
 
+(* -------------------- Function Item -------------------- *)
 
-(* -------------------- Items -------------------- *)
+and fn_item par = 
+    let (name, par') = get_identifier par in 
+    let (tok, par'') = next par' in 
+    match tok.kind with 
+    | LeftParen -> 
+        let (params, par''') = par'' |> parse_params_list ~type_required:true [] in 
+        let tok' = peek par''' in 
+        begin
+            match tok'.kind with 
+            | RightParen -> 
+                let par'''' = advance par''' in
+                par'''' |> parse_fn_body name params
+            | _ -> 
+                let par''' = report_error "expected ')' after function parameters" tok par'' in
+                (ErrorItem tok.span, par''')
+        end
+    | _ -> 
+        let par''' = report_error "expected '(' after function name" tok par'' in 
+        (ErrorItem tok.span, par''')
 
+and parse_fn_body name params par =
+    let tok = peek par in 
+    match tok.kind with 
+    | MinusGreater -> (* has return type *)
+        let par' = advance par in 
+        let (typ, par'') = parse_typ par' in 
+        let (block_expr, par''') = block par'' in
+        (FnItem { name = name; params = params; return_type = Some typ; body = block_expr; }, par''')
+    | _ -> (* no return type -> infer later *)
+        let (block_expr, par') = block par in 
+        (FnItem { name = name; params = params; return_type = None; body = block_expr; }, par')
+
+(* -------------------- Parameters -------------------- *)
+
+and parse_param ~type_required par =
+    let (name, par') = get_identifier par in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | Colon -> 
+        let par'' = advance par' in 
+        let (typ, par''') = parse_typ par'' in 
+        ({ param_name = name; param_typ = Some typ; }, par''')
+    | _ -> 
+        if type_required then 
+            let par'' = report_error "expected ':' after parameter name" tok par' in 
+            ({param_name = name; param_typ = Some (ErrorType tok.span); }, par'')   
+        else
+            ({param_name = name; param_typ = None; }, par')
+        
+and parse_params_list ~type_required params par =
+    let tok = peek par in 
+    if tok.kind = RightParen then 
+        let par' = advance par in (List.rev params, par')
+    else
+        let (param, par') = par |> parse_param ~type_required in 
+        let params' = param :: params in 
+        let tok = peek par' in 
+        if tok.kind = Comma then 
+            let par'' = advance par' in par'' |> parse_params_list ~type_required params'
+        else if tok.kind = RightParen then 
+            par' |> parse_params_list ~type_required params'
+        else
+            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
+            in (List.rev params, par'')
+
+(* -------------------- Closure Item -------------------- *)
+
+and closure_item par = 
+    let (tok, par') = next par in 
+    match tok.kind with 
+    | LeftParen -> 
+        let (params, par'') = par' |> parse_params_list ~type_required:false [] in 
+        let tok' = peek par'' in 
+        begin
+            match tok'.kind with 
+            | RightParen ->
+                let par''' = advance par'' in
+                par''' |> parse_closure_body params
+            | _ -> 
+                let par''' = report_error "expected ')' after closure parameters" tok par'' in
+                (ErrorItem tok.span, par''')
+        end
+    | _ -> 
+        let par'' = report_error "expected '(' before closure parameters" tok par' in 
+        (ErrorItem tok.span, par'')
+
+and parse_closure_body params par =
+    let tok = peek par in 
+    match tok.kind with 
+    | EqualGreater ->
+        let par' = advance par in (* consume '=>' *)
+        let (expr, par'') = expr par' in 
+        (ClosureItem { params = params; body = expr; }, par'')
+    | _ -> 
+        let par' = report_error "expected '=>' to follow after closure parameters" tok par in 
+        (ErrorItem tok.span, par')
+
+(* -------------------- Struct Item -------------------- *)
+
+and struct_item par =
+    let (name, par') = get_identifier par in
+    let (tok, par'') = next par' in
+    match tok.kind with 
+    | LeftBrace -> 
+        let par''' = advance par'' in 
+        let (fields, par'''') = par''' |> parse_field_decls [] in 
+        (StructItem { name = name; fields = fields; }, par'''')
+    | _ -> 
+        let par''' = report_error "expected '{' after struct name" tok par'' in 
+        (ErrorItem tok.span, par''')
+
+(* -------------------- Field Declarations -------------------- *)
+
+and parse_field par =
+    let (name, par') = get_identifier par in 
+    let tok = peek par' in 
+    match tok.kind with 
+    | Colon -> 
+        let par'' = advance par' in 
+        let (typ, par''') = parse_typ par'' in 
+        let tok' = peek par''' in 
+        begin 
+            match tok'.kind with 
+            | Equal -> 
+                let (expr, par'''') = expr (advance par''') in 
+                ({ field_name = name; field_typ = typ; expr = Some expr; }, par''')
+            | _ ->
+                ({ field_name = name; field_typ = typ; expr = None; }, par''')
+        end
+    | _ -> let par'' = report_error "expected ':' after field name" tok par' in 
+            ({field_name = name; field_typ = ErrorType tok.span; expr = None; }, par'')   
+        
+and parse_field_decls fields par =
+    let tok = peek par in 
+    if tok.kind = RightParen then 
+        let par' = advance par in (List.rev fields, par')
+    else
+        let (field, par') = par |> parse_field in 
+        let fields' = field :: fields in 
+        let tok = peek par' in 
+        if tok.kind = Comma then 
+            let par'' = advance par' in par'' |> parse_field_decls fields'
+        else if tok.kind = RightParen then 
+            par' |> parse_field_decls fields'
+        else
+            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
+            in (List.rev fields, par'')
+      
+(* -------------------- Variant Item -------------------- *)
+
+(* -------------------- Variant Case -------------------- *)
+
+(* -------------------- Const Item -------------------- *)
+
+and const_item par =
+    let (name, par') = get_identifier par in 
+    let (tok, par'') = next par' in 
+    match tok.kind with 
+    | Colon -> 
+        let (typ, par''') = parse_typ par'' in 
+        let (expr, par'''') = expr (advance par''') in 
+        (ConstItem { name = name; typ = Some typ; expr = expr }, par''')
+    | Equal -> 
+        let (expr, par''') = expr par'' in 
+        (ConstItem { name = name; typ = None; expr = expr }, par''')
+    | _ -> 
+        let par''' = report_error "expected '=' after identifier in const item" tok par'' in 
+        (ErrorItem tok.span, par''')
+
+(* -------------------- Item -------------------- *)
+
+and fn_or_closure_item par =
+    let tok = peek par in 
+    match tok.kind with 
+    | Identifier    -> fn_item par
+    | _             -> closure_item par (* fn with NO identifier is always assumed to be a closure *)
+
+and item par = 
+    let tok = peek par in 
+    match tok.kind with 
+    | Fn        -> fn_or_closure_item (advance par)
+    | Struct    -> struct_item (advance par)
+    | Const     -> const_item (advance par)
+    | _         -> failwith "todo: implement variant_item"

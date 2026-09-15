@@ -12,13 +12,13 @@ function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] block_e
 parameter_list = parameter { "," parameter } ;
 parameter = identifier ":" type ;
 
-closure_item = "fn" "(" [ parameter_list ] ")" "=>" block_expression ;
+closure_item = "fn" "(" [ parameter_list ] ")" "=>" expression ;
 
 struct_item = "struct" identifier "{" { field_declaration } "}" ;
 field_declaration = identifier ":" type [ "=" expression ] ;
 
 variant_item = "variant" identifier "{" { variant_case } "}" ;
-variant_case = identifier "(" { field_declaration } ")" ;
+variant_case = identifier "(" { field_declaration } ")" ; // NEEDS TO BE SEPARATE -> kinda like parameters
 
 const_item = "const" identifier [ ":" type ] "=" expression ;
 
