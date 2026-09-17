@@ -1,25 +1,22 @@
-open Error
-open Position
+open Reporter
+open Span
+open Source
 open Token
 
-type lexer = {
-    source: string;
+type t = {
+    source: Source.t;
     start: int;
     curr: int;
-    start_pos: position; (* points to the STARTING position of the token *)
-    pos: position;
-    tokens: token list;
-    reporter: reporter;
+    tokens: Token.t list;
+    reporter: Reporter.t;
 }
 
-let init src = {
+let create src rep = {
 	source = src;
     start = 0;
-    curr = 0;
-    start_pos = { line = 1; col = 1 };
-	pos = { line = 1; col = 1 };
+    curr = 0;    
     tokens = [];
-    reporter = { Error.errors = [] };
+    reporter = rep;
 } 
 
 let is_digit c = 
@@ -38,7 +35,13 @@ let is_alpha c =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
 let is_alnum c =
-    is_alpha c || is_digit c || c = '_'
+    is_alpha c || is_digit c
+
+let is_identifier_start c = 
+    is_alpha c || c = '_'
+
+let is_identifier_char c = 
+    is_identifier_start c || is_digit c
 
 let is_symbol c =
     (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~')
@@ -50,108 +53,51 @@ let is_printable c =
     is_alpha c || is_digit c || is_symbol c || is_space c
 
 let is_at_end lex =
-    lex.curr >= String.length lex.source
+    lex.curr >= String.length lex.source.contents
+
+let lexeme lex = String.sub lex.source.contents lex.start (lex.curr - lex.start)
 
 let peek lex = 
     if is_at_end lex then
         None
     else
-        Some lex.source.[lex.curr] (* returns the character at the current pointer *)
+        Some lex.source.contents.[lex.curr] (* returns the character at the current pointer *)
 
 let peek_next lex = 
-    if lex.curr + 1 >= String.length lex.source then
+    if lex.curr + 1 >= String.length lex.source.contents then
         None
     else
-        Some lex.source.[lex.curr + 1] (* returns the character 1 position ahead of the current pointer *)
+        Some lex.source.contents.[lex.curr + 1] (* returns the character 1 position ahead of the current pointer *)
 
-let advance lex =
-    let c = lex.source.[lex.curr] in (* creates a NEW lexer record with the updated current pointer and other possible values *)
-    match c with 
-    | '\n' -> (c, { lex with 
-                    curr = lex.curr + 1;
-                    pos = { line = lex.pos.line + 1; col = 1 }; })
-    | '\t' -> (c, { lex with 
-                    curr = lex.curr + 1;
-                    pos = { lex.pos with col = lex.pos.col + 4 }; })
-    | '\r' -> (c, { lex with 
-                    curr = lex.curr + 1;
-                    pos = { lex.pos with col = 1 }; })
-    | _ -> (c, { lex with 
-                    curr = lex.curr + 1;
-                    pos = { lex.pos with col = lex.pos.col + 1 }; })
+let advance lex = (lex.source.contents.[lex.curr], { lex with curr = lex.curr + 1 })
 
-let bump lex = { lex with curr = lex.curr + 1; pos = { lex.pos with col = lex.pos.col + 1 } } (* moves the current pointer by one, ONLY returns the updated lexer state, NOT the character *)
-
-let add_eof_token lex =
-    let token = { kind = EOF; lexeme = ""; pos = lex.pos } in 
-    { lex with tokens = token :: lex.tokens }
+let bump lex = { lex with curr = lex.curr + 1 } (* moves the current pointer by one, ONLY returns the updated lexer state, NOT the character *)
 
 let add_token kind lex =
-      let text = 
-        String.sub lex.source lex.start (lex.curr - lex.start) in
-    let token = { kind = kind; lexeme = text; pos = lex.start_pos } in
-    { lex with tokens = token :: lex.tokens }
+    { lex with tokens = { kind = kind; span = { start_ = lex.start; end_ = lex.curr } } :: lex.tokens }
 
-let add_char_token c lex =
-    let token = { kind = (CharLiteral c); lexeme = String.make 1 c; pos = lex.start_pos } in 
-    { lex with tokens = token :: lex.tokens }
-
-let add_string_token buf lex =
-    let token = { kind = (StringLiteral buf); lexeme = buf; pos = lex.start_pos } in 
-    { lex with tokens = token :: lex.tokens }
-
-let add_int_token lex =
-      let text = 
-        String.sub lex.source lex.start (lex.curr - lex.start) in
-    let token = { kind = (IntLiteral (int_of_string text)); lexeme = text; pos = lex.start_pos } in
-        { lex with tokens = token :: lex.tokens }
-
-let add_float_token lex =
-      let text = 
-        String.sub lex.source lex.start (lex.curr - lex.start) in
-    let token = { kind = (FloatLiteral (float_of_string text)); lexeme = text; pos = lex.start_pos } in
-        { lex with tokens = token :: lex.tokens }
-
-let add_identifier_token lex =
-      let text = 
-        String.sub lex.source lex.start (lex.curr - lex.start) in
-    let token = { kind = (Identifier text); lexeme = text; pos = lex.start_pos } in
-        { lex with tokens = token :: lex.tokens }
+let report_error msg lex =
+    let span = { start_ = lex.start; end_ = lex.curr } in
+    let lex = { lex with reporter = add_error lex.source.filename span msg None lex.reporter } in
+    add_token Illegal lex
 
 let rec read_line_comment lex = 
     if peek lex = Some '\n' || is_at_end lex then lex
     else
         let (_, lex') = advance lex in
-        read_line_comment lex'
-
-let rec read_block_comment lex =
-    if is_at_end lex then Error ("unterminated block comment", lex)
-    else if peek lex = Some '\n' then Error ("unterminated block comment", lex)
-    else if peek lex = Some '#' && peek_next lex = Some '>' then
-        let (_, lex') = advance lex in 
-        let (_, lex'') = advance lex' in
-        Ok lex''
-    else 
-        let (_, lex') = advance lex in
-        read_block_comment lex'
+        lex' |> read_line_comment
 
 let resolve_char lex c =
     if c = '\\' && not (is_at_end lex) then
         let (c', lex') = advance lex in
         match c' with
-        | 'n'   -> Ok ('\n', lex')
-        | 't'   -> Ok ('\t', lex')
-        | 'r'   -> Ok ('\r', lex')
-        | '\\'  -> Ok ('\\', lex')
-        | '\''  -> Ok ('\'', lex')
-        | '"'   -> Ok ('"', lex')
+        | 'n' | 't' | 'r' | '\\' | '\'' | '"' -> Ok lex'
         | _ -> Error ("invalid escape sequence", lex')
-        else if not (is_printable c) then
-            if c = '\\' then Error ("unterminated escape sequence in character literal", lex)
-            else
-                Error ("invalid character in literal: " ^ String.make 1 c, lex)
-        else
-            Ok (c, lex) (* character is a valid printable *)
+    else if not (is_printable c) then
+        if c = '\\' then Error ("unterminated escape sequence in character literal", lex)
+        else Error ("invalid character in literal: " ^ String.make 1 c, lex)
+    else
+        Ok lex
 
 let rec skip_until_closing_quote lex quote =
     if is_at_end lex then lex
@@ -161,7 +107,7 @@ let rec skip_until_closing_quote lex quote =
         let (_, lex') = advance lex in
         skip_until_closing_quote lex' quote
 
-let close_char lex c = 
+let close_char lex =
     if peek lex <> Some '\'' then
         if is_at_end lex then Error ("unterminated character literal", lex)
         else
@@ -169,24 +115,22 @@ let close_char lex c =
             Error ("character literal must contain only one character", lex')
     else
         let (_, lex') = advance lex in
-        Ok (c, lex')
+        Ok lex'
     
 let read_char lex =
-    if peek lex = Some '\'' then 
-        let (_, lex') = advance lex in Error ("empty character literal", lex') 
+    let open Result.Syntax in
+    if peek lex = Some '\'' then
+        let (_, lex') = advance lex in Error ("empty character literal", lex')
     else
         let (c, lex') = advance lex in
-        match resolve_char lex' c with
-        | Error e -> Error e
-        | Ok (c', lex'') -> 
-            match close_char lex'' c' with
-            | Error e -> Error e
-            | Ok (final_c, lex''') -> lex''' |> add_char_token final_c |> Result.ok (* returns updated lex with tokens updated *)
+        let* lex'' = resolve_char lex' c in 
+        let+ lex''' = close_char lex'' in 
+        lex''' |> add_token CharLiteral
 
-let rec read_string lex buf =
+let rec read_string lex =
     if is_at_end lex then Error ("unterminated string literal", lex)
     else if peek lex = Some '"' then
-        let (_, lex') = advance lex in lex' |> add_string_token buf |> Result.ok
+        let (_, lex') = advance lex in lex' |> add_token StringLiteral |> Result.ok
     else
         let (c, lex') = advance lex in
         if c = '\\' then
@@ -195,17 +139,32 @@ let rec read_string lex buf =
             else
                 let (c', lex'') = advance lex' in
                 match c' with
-                | 'n'   -> read_string lex'' (buf ^ String.make 1 '\n')
-                | 't'   -> read_string lex'' (buf ^ String.make 1 '\t')
-                | 'r'   -> read_string lex'' (buf ^ String.make 1 '\r')
-                | '/'   -> read_string lex'' (buf ^ String.make 1 '/')
-                | '\''  -> read_string lex'' (buf ^ String.make 1 '\'')
-                | '\\'  -> read_string lex'' (buf ^ String.make 1 '\\')
-                | '"'   -> read_string lex'' (buf ^ String.make 1 '"')
-                | _     -> let lex''' = skip_until_closing_quote lex'' '"' in
-                        Error ("invalid escape sequence", lex''')
+                | 'n' | 't' | 'r' | '/' | '\'' | '\\' | '"' -> read_string lex''
+                | _ ->
+                    let lex''' = skip_until_closing_quote lex'' '"' in
+                    Error ("invalid escape sequence", lex''')
         else
-            read_string lex' (buf ^ String.make 1 c)
+            read_string lex'
+
+let rec read_radix_number_helper lex ~pred ~name =
+    match peek lex with
+    | Some '.' -> Error (Printf.sprintf "%s numbers cannot have decimal points" name, lex)
+    | Some c when pred c ->
+        let (_, lex') = advance lex in
+        read_radix_number_helper lex' ~pred ~name
+    | _ -> Ok lex
+
+let read_radix_number lex ~pred ~notation ~name = 
+    let open Result.Syntax in
+    let (_, lex') = advance lex in
+    match peek lex' with
+    | None -> Error (Printf.sprintf "%s number must have at least one digit after 0%s" name notation, lex')
+    | Some c ->
+        if not (pred c) then
+            Error (Printf.sprintf "%s number must have at least one digit after 0%s" name notation, lex')
+        else
+            let+ lex'' = read_radix_number_helper lex' ~pred ~name in
+            lex'' |> add_token IntLiteral
 
 let rec read_hexadecimal_number_helper lex =
     match peek lex with
@@ -216,6 +175,7 @@ let rec read_hexadecimal_number_helper lex =
     | _ -> Ok lex
 
 let read_hexadecimal_number lex = 
+    let open Result.Syntax in
     let (_, lex') = advance lex in
     match peek lex' with
     | None -> Error ("hexadecimal number must have at least one digit after 0x", lex')
@@ -223,9 +183,8 @@ let read_hexadecimal_number lex =
         if not (is_hex_digit c) then
             Error ("hexadecimal number must have at least one digit after 0x", lex')
         else
-            match read_hexadecimal_number_helper lex' with
-            | Error e -> Error e
-            | Ok lex'' -> lex'' |> add_int_token |> Result.ok
+            let+ lex'' = read_hexadecimal_number_helper lex' in
+            lex'' |> add_token IntLiteral
 
 let rec read_binary_number_helper lex =
     match peek lex with
@@ -236,6 +195,7 @@ let rec read_binary_number_helper lex =
     | _ -> Ok lex
 
 let read_binary_number lex = 
+    let open Result.Syntax in
     let (_, lex') = advance lex in
     match peek lex' with
     | None -> Error ("binary number must have at least one digit after 0b", lex')
@@ -243,9 +203,8 @@ let read_binary_number lex =
         if not (is_binary_digit c) then
             Error ("binary number must have at least one digit after 0b", lex')
         else
-            match read_binary_number_helper lex' with
-            | Error e -> Error e
-            | Ok lex'' -> lex'' |> add_int_token |> Result.ok
+            let+ lex'' = read_binary_number_helper lex' in
+            lex'' |> add_token IntLiteral 
 
 let rec read_octal_number_helper lex =
     match peek lex with
@@ -255,7 +214,8 @@ let rec read_octal_number_helper lex =
         read_octal_number_helper lex'
     | _ -> Ok lex
 
-let read_octal_number lex = 
+let read_octal_number lex =
+    let open Result.Syntax in 
     let (_, lex') = advance lex in
     match peek lex' with
     | None -> Error ("octal number must have at least one digit after 0o", lex')
@@ -263,9 +223,8 @@ let read_octal_number lex =
         if not (is_octal_digit c) then
             Error ("octal number must have at least one digit after 0o", lex')
         else
-            match read_octal_number_helper lex' with
-            | Error e -> Error e
-            | Ok lex'' -> lex'' |> add_int_token |> Result.ok
+            let+ lex'' = read_octal_number_helper lex' in
+            lex'' |> add_token IntLiteral
    
 let is_valid_fractional_part lex =
     if peek lex = Some '.' then
@@ -281,85 +240,105 @@ let is_valid_fractional_part lex =
         
 let rec read_decimal_number_helper lex is_float =
     match peek lex with 
+    (* Integer part *)
     | Some c when is_digit c -> 
         let (_, lex') = advance lex in 
         read_decimal_number_helper lex' is_float
-    | Some '.' -> if peek_next lex = Some '.' then
-            Ok (lex, is_float) (* main loop handles range operator .. *)
-        else if is_float then
-            Ok (lex, is_float) (* already have a dot, let is_valid_fractional_part handle the error *)
-        else let (_, lex') = advance lex in (* fractional part*)
+    (* Range operator OR invalid float with extra dot *)
+    | Some '.' -> 
+        if peek_next lex = Some '.'  || is_float then Ok (lex, is_float) (* values like 3.14. are accepted here but rejected later on *)
+        (* Fractional part *)
+        else let (_, lex') = advance lex in
             read_decimal_number_helper lex' true
-    | Some 'e' | Some 'E' ->  (* scientific part *)
+    (* Scientific notation *)
+    | Some 'e' | Some 'E' -> 
         let (_, lex') = advance lex in 
         let lex'' = if peek lex' = Some '+' || peek lex' = Some '-' then
-            let (_, lex'') = advance lex' in lex'' else lex' in
-        (match peek lex'' with
-        | Some c when not (is_digit c) -> Error ("malformed scientific notation", lex'')
-        | _ -> read_decimal_number_helper lex'' true)
+                    let (_, lex'') = advance lex' in lex'' 
+                    else lex' in
+                    begin
+                        match peek lex'' with
+                        | Some c when not (is_digit c) -> Error ("malformed scientific notation", lex'')
+                        | _ -> read_decimal_number_helper lex'' true
+                    end
     | _ -> Ok (lex, is_float)
     
 let read_decimal_number lex =
-    match read_decimal_number_helper lex false with
-    | Error e -> Error e
-    | Ok (lex', is_float) -> if peek lex' = Some '.' && peek_next lex' = Some '.' then
-        lex' |> add_int_token |> Result.ok (* return early, main loop consumes the range operator ..*)
+    let open Result.Syntax in 
+    let* (lex', is_float) = read_decimal_number_helper lex false in
+    if peek lex' = Some '.' && peek_next lex' = Some '.' then
+        Ok (lex' |> add_token IntLiteral)  (* main loop consumes the range operator ..*)
     else
-        (match is_valid_fractional_part lex' with
-        | Error e -> Error e
-        | Ok lex'' -> if is_float then 
-            lex'' |> add_float_token |> Result.ok
+        let+ lex'' = is_valid_fractional_part lex' in 
+        if is_float then 
+            lex'' |> add_token FloatLiteral 
         else
-           lex'' |> add_int_token |> Result.ok)
+            lex'' |> add_token IntLiteral
 
 let rec read_identifier_helper lex =
      match peek lex with
-    | Some c when is_alnum c ->
+    | Some c when is_identifier_char c ->
         let (_, lex') = advance lex in
         read_identifier_helper lex'
     | _ -> Ok lex
 
 let read_identifier lex =
-    match read_identifier_helper lex with
-    | Error e -> Error e
-    | Ok lex' -> let lexeme =
-        String.sub lex'.source lex'.start (lex'.curr - lex'.start) in
-        match String.lowercase_ascii lexeme with
-        | "true"        -> lex' |> add_token True |> Result.ok
-        | "false"       -> lex' |> add_token False |> Result.ok
-        | "fn"          -> lex' |> add_token Fn |> Result.ok
-        | "struct"      -> lex' |> add_token Struct |> Result.ok
-        | "variant"     -> lex' |> add_token Variant |> Result.ok
-        | "let"         -> lex' |> add_token Let |> Result.ok
-        | "mut"         -> lex' |> add_token Mut |> Result.ok
-        | "const"       -> lex' |> add_token Const |> Result.ok
-        | "if"          -> lex' |> add_token If |> Result.ok
-        | "else"        -> lex' |> add_token Else |> Result.ok
-        | "for"         -> lex' |> add_token For |> Result.ok
-        | "while"       -> lex' |> add_token While |> Result.ok
-        | "loop"        -> lex' |> add_token Loop |> Result.ok
-        | "match"       -> lex' |> add_token Match |> Result.ok
-        | "break"       -> lex' |> add_token Break |> Result.ok
-        | "continue"    -> lex' |> add_token Continue |> Result.ok
-        | "return"      -> lex' |> add_token Return |> Result.ok
-        | "in"          -> lex' |> add_token In |> Result.ok
-        | "as"          -> lex' |> add_token As |> Result.ok
-        | "unit"        -> lex' |> add_token Unit |> Result.ok
-        | _             -> lex' |> add_identifier_token |> Result.ok
-    
+    let open Result.Syntax in
+    let+ lex' = read_identifier_helper lex in 
+    match String.lowercase_ascii (lexeme lex') with 
+    (* Bool Keywords*)
+    | "true"        -> lex' |> add_token True
+    | "false"       -> lex' |> add_token False
+    (* Unit Type *)
+    | "unit"        -> lex' |> add_token Unit
+    (* Function / Statement Keywords *)
+    | "fn"          -> lex' |> add_token Fn
+    | "let"         -> lex' |> add_token Let
+    | "var"         -> lex' |> add_token Var
+    | "const"       -> lex' |> add_token Const
+    | "return"      -> lex' |> add_token Return
+    (* If / Loop / Match Keywords *)
+    | "if"          -> lex' |> add_token If
+    | "else"        -> lex' |> add_token Else
+    | "for"         -> lex' |> add_token For
+    | "while"       -> lex' |> add_token While
+    | "loop"        -> lex' |> add_token Loop
+    | "match"       -> lex' |> add_token Match
+    | "in"          -> lex' |> add_token In
+    | "break"       -> lex' |> add_token Break
+    (* User Type Keywords *)
+    | "struct"      -> lex' |> add_token Struct
+    | "variant"     -> lex' |> add_token Variant
+    | "use"         -> lex' |> add_token Use
+    (* Algebraic Effects Keywords *)
+    | "effect"      -> lex' |> add_token Effect
+    | "uses"        -> lex' |> add_token Uses
+    | "with"        -> lex' |> add_token With
+    | "do"          -> lex' |> add_token Do
+    | "resume"      -> lex' |> add_token Resume
+    (* Other Keywords *)
+    | "as"          -> lex' |> add_token As
+    (* Identifier *)
+    | _             -> lex' |> add_token Identifier
+
 let read_number lex c = 
     if c = '0' then
         if peek lex = Some 'x' || peek lex = Some 'X' then
-            read_hexadecimal_number lex
+            read_radix_number lex ~pred:is_hex_digit ~notation:"x" ~name:"hexadecimal"
         else if peek lex = Some 'b' || peek lex = Some 'B' then
-            read_binary_number lex
-        else if peek lex = Some 'o' || peek lex == Some 'O' then
-            read_octal_number lex
+            read_radix_number lex ~pred:is_binary_digit ~notation:"b" ~name:"binary"
+        else if peek lex = Some 'o' || peek lex = Some 'O' then
+            read_radix_number lex ~pred:is_octal_digit ~notation:"o" ~name:"octal"
         else
             read_decimal_number lex
     else
           read_decimal_number lex
-         
+          
+let with_eq tok tok_eq lex =
+  match peek lex with
+  | Some '=' -> lex |> bump |> add_token tok_eq
+  | _ -> lex |> add_token tok
+
 let read_token lex = 
     let (c, lex) = advance lex in 
     match c with 
@@ -372,95 +351,114 @@ let read_token lex =
     | ']' -> lex |> add_token RightBracket 
     | ',' -> lex |> add_token Comma
     | ':' -> lex |> add_token Colon
-    | ' ' | '\r'  | '\t' | '\n' -> lex (* skip these characters, return same lexer state *)
+    | '_' -> lex |> add_token Underscore
+    | ' ' | '\r'  | '\t' | '\n' -> lex (* skip these characters *)
     (* Operators *)
-    | '<' -> (match peek lex with
-            | Some '#' -> (match read_block_comment (bump lex) with (* looking at block comment <# *)
-                | Ok lex -> lex
-                | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+    | '<' -> 
+        begin 
+            match peek lex with
             | Some '<' -> let lex' = bump lex in (* looking now at << *)
                 (match peek lex' with
                 | Some '=' -> lex' |> bump |> add_token LessLessEqual
                 | _ -> lex' |> add_token LessLess)
-            | Some '=' -> lex |> bump |> add_token LessEqual (* we already looked at <# and <<= / <<, now we look for <=, otherwise <*)
+            | Some '=' -> lex |> bump |> add_token LessEqual (* we already looked at <<= / <<, now we look for <=, otherwise <*)
             | _ -> lex |> add_token Less
-            )    
-    | '>' -> (match peek lex with
+        end     
+    | '>' ->
+        begin
+            match peek lex with
             | Some '>' -> let lex' = bump lex in (* looking now at >> *)
                 (match peek lex' with
                 | Some '=' -> lex' |> bump |> add_token GreaterGreaterEqual (* >>= *)
                 | _ -> lex' |> add_token GreaterGreater) (* >> *) 
             | Some '=' -> lex |> bump |> add_token GreaterEqual (* we already looked at >>= / >>, now we look for >=, otherwise >*)
             | _ -> lex |> add_token Greater
-            ) 
-    | '.' -> (match peek lex with
+        end
+    | '.' -> 
+        begin
+            match peek lex with
             | Some '.' -> let lex' = bump lex in (* looking now at .. *)
                 (match peek lex' with
                 | Some '=' -> lex' |> bump |> add_token PeriodPeriodEqual (* ..= *)
                 | _ -> lex' |> add_token PeriodPeriod) (* .. *) 
-            | _ -> lex |> add_token Period) 
-    | '+' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token PlusEqual
-            | _ -> lex |> add_token Plus)     
-
-    | '-' -> (match peek lex with 
+            | _ -> lex |> add_token Period
+        end
+    | '+' -> lex |> with_eq Plus PlusEqual
+    | '-' -> 
+        begin
+            match peek lex with 
             | Some '=' -> lex |> bump |> add_token MinusEqual
-            | Some '>' -> lex |> bump |> add_token MinusGreater (* issue here *)
-            | _ -> lex |> add_token Minus)       
-    | '*' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token StarEqual
-            | _ -> lex |> add_token Star)            
-    | '/' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token SlashEqual
-            | _ -> lex |> add_token Slash)
-    | '%' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token PercentEqual
-            | _ -> lex |> add_token Percent)
-    | '!' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token ExclaimEqual
-            | _ -> lex |> add_token Exclaim)
-    | '=' -> (match peek lex with 
+            | Some '>' -> lex |> bump |> add_token MinusGreater
+            | _ -> lex |> add_token Minus
+        end   
+    | '*' -> lex |> with_eq Star StarEqual          
+    | '/' -> lex |> with_eq Slash SlashEqual  
+    | '%' -> lex |> with_eq Percent PercentEqual
+    | '!' -> lex |> with_eq Exclaim ExclaimEqual
+    | '=' -> 
+        begin 
+            match peek lex with 
             | Some '=' -> lex |> bump |> add_token EqualEqual
-            | Some '>' -> lex |> bump |> add_token EqualGreater (* issue here *)
-            | _ -> lex |> add_token Equal)
-    | '&' -> (match peek lex with 
+            | Some '>' -> lex |> bump |> add_token EqualGreater
+            | _ -> lex |> add_token Equal
+        end
+    | '&' -> 
+        begin 
+            match peek lex with 
             | Some '&' -> lex |> bump |> add_token AmpAmp
             | Some '=' -> lex |> bump |> add_token AmpEqual
-            | _ -> lex |> add_token Amp)
-    | '|' -> (match peek lex with 
+            | _ -> lex |> add_token Amp
+        end
+    | '|' -> 
+        begin
+            match peek lex with 
             | Some '|' -> lex |> bump |> add_token PipePipe
             | Some '=' -> lex |> bump |> add_token PipeEqual
-            | _ -> lex |> add_token Pipe)
-    | '^' -> (match peek lex with 
-            | Some '=' -> lex |> bump |> add_token CaretEqual
-            | _ -> lex |> add_token Caret)
+            | _ -> lex |> add_token Pipe
+        end
+    | '^' -> lex |> with_eq Caret CaretEqual
     | '~' -> lex |> add_token Tilde
-    | '?' -> (match peek lex with 
+    | '?' -> 
+        begin 
+            match peek lex with 
             | Some '?' -> lex |> bump |> add_token QuestionQuestion
-            | _ -> lex |> add_token Question)
+            | _ -> lex |> add_token Question
+        end
     | '@' -> lex |> add_token At
     (* Line Comment *)
     | '#' -> read_line_comment lex
     (* Literals *)
-    | '\'' -> (match read_char lex with 
-        | Ok lex -> lex
-        | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
-    | '"' -> (match read_string lex "" with
-        | Ok lex -> lex
-        | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
-    | c when is_digit c -> (match read_number lex c with
-        | Ok lex -> lex
-        | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
-    | c when is_alpha c -> (match read_identifier lex with
-        | Ok lex -> lex
-        | Error (msg, lex) -> let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex)
+    | '\'' -> 
+        begin 
+            match read_char lex with 
+            | Ok lex -> lex
+            | Error (msg, lex) -> lex |> report_error msg
+        end
+    | '"' -> 
+        begin
+            match read_string lex with
+            | Ok lex -> lex
+            | Error (msg, lex) -> lex |> report_error msg
+        end
+    | c when is_digit c -> 
+        begin
+            match read_number lex c with
+            | Ok lex -> lex
+            | Error (msg, lex) -> lex |> report_error msg
+        end
+    | c when is_identifier_start c -> 
+        begin
+            match read_identifier lex with
+            | Ok lex -> lex
+            | Error (msg, lex) -> lex |> report_error msg
+        end
     (* Character not supported in language, report error *)
-    | _ -> let msg = "unexpected character '" ^ String.make 1 c ^ String.make 1 '\'' in
-            let lex = { lex with reporter = add_error lex.pos msg lex.reporter } in add_token Illegal lex
+    | _ -> lex |> report_error (Printf.sprintf "unexpected character '%c'" c)
         
 let rec read_tokens lex =
     if is_at_end lex then
-        { lex with tokens = List.rev (add_eof_token lex).tokens }
+        let lex = { lex with start = lex.curr } in
+        { lex with tokens = List.rev (add_token EOF lex).tokens }
     else
-        let lex = { lex with start = lex.curr; start_pos = lex.pos } in
+        let lex = { lex with start = lex.curr } in
         read_tokens (read_token lex)

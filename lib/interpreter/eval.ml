@@ -1,4 +1,4 @@
-open Frontend
+(* open Frontend
 open Value
 open Env
 open Lexer
@@ -447,4 +447,4 @@ let rec eval items env =
             match env |> eval_item item with 
             | Error e -> Error e
             | Ok (_, env') -> env' |> eval rest
-        end
+        end *)

@@ -1,4 +1,6 @@
-type span = {
-    start_pos: int;
-    end_pos: int;
+type offset = int
+
+type t = {
+    start_: offset;
+    end_: offset;
 }

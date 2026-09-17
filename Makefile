@@ -1,4 +1,4 @@
-.PHONY: run interpret build clean
+.PHONY: run interpret build clean test
 
 run: build
 	./_build/default/bin/main.exe
@@ -10,7 +10,13 @@ endif
 	./_build/default/bin/main.exe $(FILE)
 
 build:
-	opam exec -- dune build
+	@echo Building the language...
+	@opam exec -- dune build
 
 clean:
-	opam exec -- dune clean
+	@echo Cleaning up build...
+	@opam exec -- dune clean
+
+test:
+	@echo Running tests...
+	@opam exec -- dune test

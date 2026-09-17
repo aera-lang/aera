@@ -1,4 +1,9 @@
 open Token
+open Typ
+
+(* Type *)
+
+type typ = Typ.t 
 
 (* Basic Operators *)
 
@@ -12,8 +17,11 @@ type binary_op =
 (* Bitwise *)
 | BitAnd | BitOr | BitXor | Shl | Shr
 
-type unary_op =
+type unary_op = (* = prefix_op *)
 | Neg | Not (* - / ! *)
+
+type postfix_op =
+| Subscript | FieldAccess
 
 type assign_op =
 (* Reassignment *)
@@ -26,62 +34,71 @@ type assign_op =
 (* Literals *)
 
 type literal =
-| LitInt of int (* resolve suffix and type later *)
-| LitFloat of float (* resolve suffix and type later *)
-| LitChar of char
-| LitString of string
-| LitBool of bool
+| IntLiteral of Int64.t
+| FloatLiteral of float
+| CharLiteral of char
+| StringLiteral of string
+| BoolLiteral of bool
+
+(* Identifiers *)
+
+type identifier = string
 
 (* Program *)
 
-type program = {
-    items: item list;
-}
+type program = item list (* no need to be a record *)
 
 and item =
 | FnItem of fn_item
+| ClosureItem of closure_item
 | StructItem of struct_item
-| VariantItem of variant_item
 | ConstItem of const_item
+| ErrorItem of Span.t
+
 
 and fn_item = {
-    name: string;
-    params: (string * string option) list;
-    return_type: string option; (* if omitted, return unit type *)
+    name: identifier;
+    params: param list;
+    return_type: typ option; (* if omitted, infer *)
     body: expr;
 }
 
-and struct_item = {
-    name: string;
-    fields: (string * string) list; (* format = name : type *)
+and closure_item = {
+    params: param list;
+    body: expr;
 }
 
-and variant_case = string * (string * string) list (* if the list is empty, the variant carries nothing *)
-                                                   (* note -> string * string will be changed to string * typ once
-                                                    type system has been implemented *)
-and variant_item = {
-    name: string;
-    cases: variant_case list;
+and param = {
+    param_name: identifier;
+    param_typ: typ option;
+}
+
+and struct_item = {
+    name: identifier;
+    fields: field list;
+}
+
+and field = {
+    field_name: identifier;
+    field_typ: typ;
+    expr: expr option; 
 }
 
 and const_item = {
-    name: string;
-    typ: string option;
+    name: identifier;
+    typ: typ option;
     expr: expr;
 }
 
 (* Expressions *)
 
-and block = {
-    stmts: stmt list;
-    expr: expr; 
-}
-
 and expr =
 | Literal           of literal
-| Identifier        of string
+| Ident             of identifier
 | Grouping          of expr
-| Call              of { callee: expr; args: expr list }
+| Index             of { target: expr; index: expr; }
+| FieldAccess       of { target: expr; field: identifier; }
+| Call              of { callee: expr; args: argument list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
 | Assign            of { lhs: expr; op: assign_op; rhs: expr }
 | Unary             of { op: unary_op; rhs: expr }
@@ -89,24 +106,36 @@ and expr =
 | InfiniteLoop      of expr
 | WhileLoop         of { cond: expr; body: expr }
 | IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
-| BreakExpr         of expr option
-| ReturnExpr        of expr option
+| ArrayExpr         of expr list 
+| TupleExpr         of expr list
+| ErrorExpr         of Span.t
+
+and argument = 
+| Positional of expr 
+| Named of { name: identifier; value: expr; }
+
+and block = {
+    stmts: stmt list;
+    expr: expr option; 
+}
 
 (* Statements *)
 
 and stmt = 
+| Item              of item
 | LetStmt           of let_stmt
+| VarStmt           of var_stmt
+| ExprStmt          of expr
+| ErrorStmt         of Span.t
 
 and let_stmt = { 
-    name: string;
-    typ: string option;
+    name: identifier;
+    typ: typ option;
     expr: expr;
 }
 
-(* REPL nodes *)
-
-type repl =
-| ReplItem of item
-| ReplExpr of expr
-| ReplStmt of stmt
-
+and var_stmt = { 
+    name: identifier;
+    typ: typ option;
+    expr: expr;
+}

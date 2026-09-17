@@ -1,0 +1,172 @@
+program = { item } EOF ;
+
+item = function_item 
+     | closure_item
+     | struct_item
+     | const_item ;
+
+(* Items *)
+
+function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] block_expression ;
+parameter_list = parameter { "," parameter } ;
+parameter = identifier ":" type ;
+
+closure_item = "fn" "(" [ parameter_list ] ")" "=>" expression ;
+
+struct_item = "struct" identifier "{" { field_declaration } "}" ;
+field_declaration = identifier ":" type [ "=" expression ] ;
+
+const_item = "const" identifier [ ":" type ] "=" expression ;
+
+(* Expressions *)
+
+expression = expression_with_block
+           | expression_without_block ;
+
+expression_with_block = block_expression
+                      | loop_expression
+                      | if_expression ;
+    
+expression_without_block = literal_expression
+                         | operator_expression
+                         | grouped_expression
+                         | index_expression
+                         | call_expression
+                         | array_expression
+                         | tuple_expression
+                         | struct_expression ;
+
+block_expression = "{" { statement } [ expression ] "}" ;
+loop_expression = infinite_loop_expression
+                | while_loop_expression ;
+
+infinite_loop_expression = "loop" block_expression ;
+while_loop_expression = "while" expression block_expression ; 
+
+if_expression = "if" expression block_expression [ "else" block_expression ] ;
+
+literal_expression = literal ;
+operator_expression = assignment_expression
+                    | compound_assignment_expression
+                    | comparsion_expression
+                    | arithmetic_expression
+                    | bitwise_expression
+                    | logical_expression
+                    | negation_expression ;
+
+assignment_expression = expression "=" expression ;
+compound_assignment_expression = expression "+=" expression
+                              | expression "-=" expression
+                              | expression "*=" expression
+                              | expression "/=" expression
+                              | expression "%=" expression
+                              | expression "&=" expression
+                              | expression "|=" expression
+                              | expression "^=" expression
+                              | expression "<<=" expression
+                              | expression ">>=" expression ;
+
+comparsion_expression = expression "==" expression
+                      | expression "!=" expression
+                      | expression ">" expression
+                      | expression "<" expression
+                      | expression ">=" expression
+                      | expression "<=" expression ;
+
+arithmetic_expression = expression "+" expression
+                      | expression "-" expression
+                      | expression "*" expression
+                      | expression "/" expression
+                      | expression "%" expression ;
+
+bitwise_expression = expression "&" expression
+                   | expression "|" expression
+                   | expression "^" expression
+                   | expression ">>" expression
+                   | expression "<<" expression ;
+
+logical_expression = expression "&&" expression
+            | expression "||" expression ;
+
+negation_expression = "-" expression
+            | "!" expression ;
+
+grouped_expression = "(" expression ")" ;
+index_expression = expression "[" expression "]" ;
+field_access_expression = expression "." identifier 
+
+call_expression = expression "(" [ argument_list ] ")" ;
+
+argument_list = argument { ","  argument } ;
+argument = [ identifier ":" ] expression ; 
+
+array_expression = "[" expression_list "]" ;
+tuple_expression = "(" tuple_expression_list ")" ;
+tuple_expression_list = expression "," [ expression_list ] ;
+
+expression_list = expression { ","  expression } ;
+
+struct_expression = call_expression ;
+
+statement = item
+          | let_statement
+          | var_statement 
+          | expression_statement ;
+
+let_statement = "let" identifier [ ":" type ] "=" expression ;
+var_statement = "var" identifier [ ":" type ] "=" expression ;
+expression_statement = expression ;
+
+literal = integer_literal
+        | float_literal
+        | character_literal
+        | string_literal
+        | boolean_literal ;
+
+integer_literal = decimal_integer
+                | hexadecimal_integer
+                | binary_integer
+                | octal_integer ;
+
+decimal_integer = digit { digit } ;
+hexadecimal_integer = "0" ( "x" | "X")  hex_digit { hex_digit } ;
+binary_integer = "0" ( "b" | "B" ) binary_digit { binary_digit } ;
+octal_integer = "0" ( "o" | "O" ) octal_digit { octal_digit } ;
+
+float_literal = decimal_integer "." decimal_integer [ scientific_notation ]
+              | decimal_integer scientific_notation ;
+scientific_notation = ( "e" | "E" ) [ "+" | "-" ] decimal_integer ;
+
+character_literal = "'" character  "'" ;
+string_literal = """ { character } """ ;
+boolean_literal = "true" | "false" ;
+
+character = printable | escape_sequence ;
+printable = alpha | digit | symbol | space ;
+alpha = "a" ... "z" | "A" ... "Z" ;
+digit = "0" ... "9";
+hex_digit = digit | "a" ... "f" | "A" ... "F" ;
+binary_digit = "0" | "1" ;
+octal_digit = "0" ... "7" ;
+symbol = "!" ... "[" | "]" ... "`" | "{" ... "~" ;
+underscore = "_" ;
+escape_sequence = "\\" ( "n" | "t" | "r" | "\"" | "'" | "\\" ) ;
+space = " " ;
+
+identifier = ( alpha | "_" ) { ( alpha | digit | "_" ) } ;
+
+type = primitive_type 
+     | compound_type ; 
+
+primitive_type = "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "uint64" | "float32" | "float64" | "char" | "string" | "bool" | "unit" ; 
+compound_type = fixed_array_type 
+              | tuple_type
+              | user_defined_type ;
+
+fixed_array_type = "[" type "," array_size "]" ;
+array_size = integer_literal ;
+
+tuple_type = "(" type "," [ type_list ] ")"
+type_list = type { "," type } ;
+
+user_defined_type = identifier ;

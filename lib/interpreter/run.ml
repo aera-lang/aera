@@ -1,4 +1,4 @@
-open Frontend
+(* open Frontend
 open Eval
 open Value
 
@@ -19,4 +19,4 @@ let interpret path =
             match env |> eval program.items with 
             | Error e -> print_endline e 
             | Ok (value, env') -> print_value value
-        end
+        end *)

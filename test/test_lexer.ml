@@ -5,122 +5,111 @@ open Test_lexer_helper
 let test_let_binding () =
     let tokens = lex_string "let x = 5" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "x" 1 5;
-        equal 1 7;
-        int_lit 5 "5" 1 9;
-        eof 1 10;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        int_lit 8 9;
+        eof 9 9;
     ]
 
 let test_if_expr () =
     let tokens = lex_string "if true { do_something() }" in
     Test_lexer_helper.expect_tokens tokens [
-        if_ 1 1;
-        true_lit 1 4;
-        left_brace 1 9;
-        identifier "do_something" 1 11;
-        left_paren 1 23;
-        right_paren 1 24;
-        right_brace 1 26;
-        eof 1 27;
+        if_ 0 2;
+        true_lit 3 7;
+        left_brace 8 9;
+        identifier 10 22;
+        left_paren 22 23;
+        right_paren 23 24;
+        right_brace 25 26;
+        eof 26 26;
     ]
 
 let test_while_expr () =
     let tokens = lex_string "while x > 10 { do_something() }" in
     Test_lexer_helper.expect_tokens tokens [
-        while_ 1 1;
-        identifier "x" 1 7;
-        greater 1 9;
-        int_lit 10 "10" 1 11;
-        left_brace 1 14;
-        identifier "do_something" 1 16;
-        left_paren 1 28;
-        right_paren 1 29;
-        right_brace 1 31;
-        eof 1 32;
+        while_ 0 5;
+        identifier 6 7;
+        greater 8 9;
+        int_lit 10 12;
+        left_brace 13 14;
+        identifier 15 27;
+        left_paren 27 28;
+        right_paren 28 29;
+        right_brace 30 31;
+        eof 31 31;
     ]
 
 let test_loop_expr () =
     let tokens = lex_string "loop { do_something() }" in 
     Test_lexer_helper.expect_tokens tokens [
-        loop 1 1;
-        left_brace 1 6;
-        identifier "do_something" 1 8;
-        left_paren 1 20;
-        right_paren 1 21;
-        right_brace 1 23;
-        eof 1 24;
+        loop 0 4;
+        left_brace 5 6;
+        identifier 7 19;
+        left_paren 19 20;
+        right_paren 20 21;
+        right_brace 22 23;
+        eof 23 23;
 
     ]    
 
 let test_fn_item () = 
     let tokens = lex_string "fn add(a, b) -> int32 { a + b }" in 
     Test_lexer_helper.expect_tokens tokens [
-        fn 1 1;
-        identifier "add" 1 4;
-        left_paren 1 7;
-        identifier "a" 1 8;
-        comma 1 9;
-        identifier "b" 1 11;
-        right_paren 1 12;
-        minus_greater 1 14;
-        identifier "int32" 1 17;
-        left_brace 1 23;
-        identifier "a" 1 25;
-        plus 1 27;
-        identifier "b" 1 29;
-        right_brace 1 31;
-        eof 1 32;
+        fn 0 2;
+        identifier 3 6;
+        left_paren 6 7;
+        identifier 7 8;
+        comma 8 9;
+        identifier 10 11;
+        right_paren 11 12;
+        minus_greater 13 15;
+        identifier 16 21;
+        left_brace 22 23;
+        identifier 24 25;
+        plus 26 27;
+        identifier 28 29;
+        right_brace 30 31;
+        eof 31 31;
     ]
    
-let test_let_mut_binding () = 
-    let tokens = lex_string "let mut x = 3.14" in 
-    Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        mut 1 5;
-        identifier "x" 1 9;
-        equal 1 11;
-        float_lit 3.14 "3.14" 1 13;
-        eof 1 17;
-    ]
-
 (* Strings *)
 
 let test_empty_string () = 
     let tokens = lex_string "let empty = \"\"" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "empty" 1 5;
-        equal 1 11;
-        str_lit "" 1 13;
-        eof 1 15;
+        let_ 0 3;
+        identifier 4 9;
+        equal 10 11;
+        str_lit 12 14;
+        eof 14 14;
     ]
 
 let test_escaped_quotes_blacklash () = 
     let tokens = lex_string "let s = \"a \\\"quoted\\\" string and a \\\\ backslash\"" in 
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "s" 1 5;
-        equal 1 7;
-        str_lit "a \"quoted\" string and a \\ backslash" 1 9;
-        eof 1 49;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        str_lit 8 48;
+        eof 48 48;
     ]
 
 let test_unterminated_string () = 
     let tokens = lex_string "let s = \"abc" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "s" 1 5;
-        equal 1 7;
-        illegal "\"abc" 1 9;
-        eof 1 13;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        illegal 8 12;
+        eof 12 12;
     ]
 
 let test_invalid_escape_string () = 
     let tokens = lex_string "\"hello \\z world\"" in
     Test_lexer_helper.expect_tokens tokens [
-        illegal "\"hello \\z world\"" 1 1;
-        eof 1 17;
+        illegal 0 16;
+        eof 16 16;
     ]
 
 (* Characters *)
@@ -128,51 +117,51 @@ let test_invalid_escape_string () =
 let test_simple_char () = 
     let tokens = lex_string "let c = 'a'" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "c" 1 5;
-        equal 1 7;
-        char_lit 'a' 1 9;
-        eof 1 12;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        char_lit 8 11;
+        eof 11 11;
     ]
 
 let test_escaped_character () = 
     let tokens = lex_string "let newline = '\\n'" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "newline" 1 5;
-        equal 1 13;
-        char_lit '\n' 1 15;
-        eof 1 19;
+        let_ 0 3;
+        identifier 4 11;
+        equal 12 13;
+        char_lit 14 18;
+        eof 18 18;
     ]
 
 let test_empty_char () = 
     let tokens = lex_string "let c = ''" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "c" 1 5;
-        equal 1 7;
-        illegal "''" 1 9; 
-        eof 1 11;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        illegal 8 10; 
+        eof 10 10;
     ]
 
 let test_long_char () = 
     let tokens = lex_string "let c = 'ab'" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "c" 1 5;
-        equal 1 7;
-        illegal "'ab'" 1 9; 
-        eof 1 13;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        illegal 8 12; 
+        eof 12 12;
     ]
 
 let test_invalid_char () = 
     let tokens = lex_string "let x = $" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "x" 1 5;
-        equal 1 7;
-        illegal "$" 1 9;
-        eof 1 10;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        illegal 8 9;
+        eof 9 9;
     ]
 
 (* Integers *)
@@ -180,41 +169,41 @@ let test_invalid_char () =
 let test_binary_int () = 
     let tokens = lex_string "let answer = 0b001" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "answer" 1 5;
-        equal 1 12;
-        int_lit 0b001 "0b001" 1 14;
-        eof 1 19;
+        let_ 0 3;
+        identifier 4 10;
+        equal 11 12;
+        int_lit 13 18;
+        eof 18 18;
     ]
 
 let test_octal_int () = 
     let tokens = lex_string "let answer = 0o512" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "answer" 1 5;
-        equal 1 12;
-        int_lit 0o512 "0o512" 1 14;
-        eof 1 19;
+        let_ 0 3;
+        identifier 4 10;
+        equal 11 12;
+        int_lit 13 18;
+        eof 18 18;
     ]
     
 let test_hexadecimal_int () = 
     let tokens = lex_string "let answer = 0xFF0000" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "answer" 1 5;
-        equal 1 12;
-        int_lit 0xFF0000 "0xFF0000" 1 14;
-        eof 1 22;
+        let_ 0 3;
+        identifier 4 10;
+        equal 11 12;
+        int_lit 13 21;
+        eof 21 21;
     ]
 
 let test_decimal_int () = 
     let tokens = lex_string "let answer = 42" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "answer" 1 5;
-        equal 1 12;
-        int_lit 42 "42" 1 14;
-        eof 1 16;
+        let_ 0 3;
+        identifier 4 10;
+        equal 11 12;
+        int_lit 13 15;
+        eof 15 15;
     ]
 
 (* Float *)
@@ -222,71 +211,71 @@ let test_decimal_int () =
 let test_float () = 
     let tokens = lex_string "let pi = 3.14" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "pi" 1 5;
-        equal 1 8;
-        float_lit 3.14 "3.14" 1 10;
-        eof 1 14;
+        let_ 0 3;
+        identifier 4 6;
+        equal 7 8;
+        float_lit 9 13;
+        eof 13 13;
     ]
 
 let test_float_sci () = 
     let tokens = lex_string "let val = 1.7e12" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "val" 1 5;
-        equal 1 9;
-        float_lit 1.7e12 "1.7e12" 1 11;
-        eof 1 17;
+        let_ 0 3;
+        identifier 4 7;
+        equal 8 9;
+        float_lit 10 16;
+        eof 16 16;
     ]
 
 let test_float_sci_pos () = 
     let tokens = lex_string "let e = 2.7e+5" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "e" 1 5;
-        equal 1 7;
-        float_lit 2.7e+5 "2.7e+5" 1 9;
-        eof 1 15;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        float_lit 8 14;
+        eof 14 14;
     ]
 
 let test_float_sci_neg () = 
     let tokens = lex_string "let lr = 0.1e-5" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "lr" 1 5;
-        equal 1 8;
-        float_lit 0.1e-5 "0.1e-5" 1 10;
-        eof 1 16;
+        let_ 0 3;
+        identifier 4 6;
+        equal 7 8;
+        float_lit 9 15;
+        eof 15 15;
     ]
 
 let test_float_trailing_dot () = 
     let tokens = lex_string "let pi = 3." in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "pi" 1 5;
-        equal 1 8;
-        float_lit 3. "3." 1 10;
-        eof 1 12;
+        let_ 0 3;
+        identifier 4 6;
+        equal 7 8;
+        float_lit 9 11;
+        eof 11 11;
     ]
 
 let test_malformed_number_extra_dot () = 
     let tokens = lex_string "let pi = 3.14." in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "pi" 1 5;
-        equal 1 8;
-        illegal "3.14." 1 10;
-        eof 1 15;
+        let_ 0 3;
+        identifier 4 6;
+        equal 7 8;
+        illegal 9 14;
+        eof 14 14;
     ]
 
 let test_malformed_sci () = 
     let tokens = lex_string "let lr = 0.1e-5." in 
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "lr" 1 5;
-        equal 1 8;
-        illegal "0.1e-5." 1 10;
-        eof 1 17;
+        let_ 0 3;
+        identifier 4 6;
+        equal 7 8;
+        illegal 9 16;
+        eof 16 16;
     ]
 
 (* Comments *)
@@ -294,41 +283,17 @@ let test_malformed_sci () =
 let test_line_comment () = 
     let tokens = lex_string "# this is a comment and should be ignored" in
     Test_lexer_helper.expect_tokens tokens [
-        eof 1 42;
-    ]
-
-let test_block_comment () = 
-    let tokens = lex_string "<# this is a block comment and should be ignored #>" in
-    Test_lexer_helper.expect_tokens tokens [
-        eof 1 52;
+        eof 41 41;
     ]
 
 let test_comment_ignored () = 
     let tokens = lex_string "let x = 5 # assign 5 to x" in
     Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "x" 1 5;
-        equal 1 7;
-        int_lit 5 "5" 1 9;
-        eof 1 26;
-    ]
-
-let test_unterminated_block_comment () = 
-    let tokens = lex_string "let x = 5 <# this is not closed" in
-    Test_lexer_helper.expect_tokens tokens [
-        let_ 1 1;
-        identifier "x" 1 5;
-        equal 1 7;
-        int_lit 5 "5" 1 9;
-        illegal "<# this is not closed" 1 11;
-        eof 1 32;
-    ]
-
-let test_malformed_block_comment () = 
-    let tokens = lex_string "<# this is not closed again #" in
-    Test_lexer_helper.expect_tokens tokens [
-        illegal "<# this is not closed again #" 1 1;
-        eof 1 30;
+        let_ 0 3;
+        identifier 4 5;
+        equal 6 7;
+        int_lit 8 9;
+        eof 25 25;
     ]
 
 (* Multi-Line *)
@@ -340,17 +305,17 @@ let test_hello_world () =
 |} in
     let tokens = lex_string input in 
     Test_lexer_helper.expect_tokens tokens [
-        fn 1 1;
-        identifier "main" 1 4;
-        left_paren 1 8;
-        right_paren 1 9;
-        left_brace 1 11;
-        identifier "print" 2 5;
-        left_paren 2 10;
-        str_lit "Hello world" 2 11;
-        right_paren 2 24;
-        right_brace 3 1;
-        eof 4 1;
+        fn 0 2;
+        identifier 3 7;
+        left_paren 7 8;
+        right_paren 8 9;
+        left_brace 10 11;
+        identifier 16 21;
+        left_paren 21 22;
+        str_lit 22 35;
+        right_paren 35 36;
+        right_brace 37 38;
+        eof 39 39;
     ]
 
 let test_fn_and_loop () = 
@@ -360,7 +325,7 @@ let test_fn_and_loop () =
 }
 
 fn sum(num: int64) -> int64 {
-    let mut total: int64 = 0
+    let total: int64 = 0
     for i in 0..num {
         total += i
     }
@@ -369,69 +334,66 @@ fn sum(num: int64) -> int64 {
 |} in
     let tokens = lex_string input in 
     Test_lexer_helper.expect_tokens tokens [
-        (* main function *)
-        fn 1 1;
-        identifier "main" 1 4;
-        left_paren 1 8;
-        right_paren 1 9;
-        left_brace 1 11;
-        let_ 2 5;
-        identifier "ans" 2 9;
-        equal 2 13;
-        identifier "sum" 2 15;
-        left_paren 2 18;
-        int_lit 5 "5" 2 19;
-        right_paren 2 20;
-        identifier "print" 3 5;
-        left_paren 3 10;
-        identifier "ans" 3 11;
-        right_paren 3 14;
-        right_brace 4 1;
+        (* Main function *)
+        fn 0 2;
+        identifier 3 7;
+        left_paren 7 8;
+        right_paren 8 9;
+        left_brace 10 11;
+        let_ 16 19;
+        identifier 20 23;
+        equal 24 25;
+        identifier 26 29;
+        left_paren 29 30;
+        int_lit 30 31;
+        right_paren 31 32;
+        identifier 37 42;
+        left_paren 42 43;
+        identifier 43 46;
+        right_paren 46 47;
+        right_brace 48 49;
 
-        (* sum function *)
-        fn 6 1;
-        identifier "sum" 6 4;
-        left_paren 6 7;
-        identifier "num" 6 8;
-        colon 6 11;
-        identifier "int64" 6 13;
-        right_paren 6 18;
-        minus_greater 6 20;
-        identifier "int64" 6 23;
-        left_brace 6 29;
-        let_ 7 5;
-        mut 7 9;
-        identifier "total" 7 13;
-        colon 7 18;
-        identifier "int64" 7 20;
-        equal 7 26;
-        int_lit 0 "0" 7 28;
-        for_ 8 5;
-        identifier "i" 8 9;
-        in_ 8 11;
-        int_lit 0 "0" 8 14;
-        period_period 8 15;
-        identifier "num" 8 17;
-        left_brace 8 21;
-        identifier "total" 9 9 ;
-        plus_equal 9 15;
-        identifier "i" 9 18;
-        right_brace 10 5;
-        return_ 11 5;
-        identifier "total" 11 12;
-        right_brace 12 1;
-        eof 13 1;
+        (* Sum function *)
+        fn 51 53;
+        identifier 54 57;
+        left_paren 57 58;
+        identifier 58 61;
+        colon 61 62;
+        identifier 63 68;
+        right_paren 68 69;
+        minus_greater 70 72;
+        identifier 73 78;
+        left_brace 79 80;
+        var 85 88;
+        identifier 89 94;
+        colon 94 95;
+        identifier 96 101;
+        equal 102 103;
+        int_lit 104 105;
+        for_ 110 113;
+        identifier 114 115;
+        in_ 116 118;
+        int_lit 119 120;
+        period_period 120 122;
+        identifier 122 125;
+        left_brace 126 127;
+        identifier 136 141;
+        plus_equal 142 144;
+        identifier 145 146;
+        right_brace 151 152;
+        return_ 157 163;
+        identifier 164 169;
+        right_brace 170 171;
+        eof 172 172;
     ]
 
-let () =
-  Alcotest.run "Lexer" [
+let tests = [
     ("keywords", [
         Alcotest.test_case "let binding" `Quick test_let_binding;
         Alcotest.test_case "if expression" `Quick test_if_expr;
         Alcotest.test_case "while expression" `Quick test_while_expr;
         Alcotest.test_case "loop expression" `Quick test_loop_expr;
         Alcotest.test_case "fn item" `Quick test_fn_item;
-        Alcotest.test_case "let mut binding" `Quick test_let_mut_binding;
     ]);
     ("strings", [
         Alcotest.test_case "empty string" `Quick test_empty_string;
@@ -463,13 +425,10 @@ let () =
     ]);
     ("comments", [
         Alcotest.test_case "line comment" `Quick test_line_comment;
-        Alcotest.test_case "block comment" `Quick test_block_comment;
         Alcotest.test_case "comment ignored" `Quick test_comment_ignored;
-        Alcotest.test_case "unterminated block comment" `Quick test_unterminated_block_comment;
-        Alcotest.test_case "malformed block comment" `Quick test_malformed_block_comment;
     ]);
     ("multi-line", [
         Alcotest.test_case "hello world" `Quick test_hello_world;
         Alcotest.test_case "sum function" `Quick test_fn_and_loop;
     ]);
-  ]
+]

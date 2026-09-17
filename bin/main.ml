@@ -1,4 +1,4 @@
-open Frontend
+(* open Frontend
 open Interpreter
 
 let has_valid_ext path =
@@ -16,3 +16,4 @@ let () =
         Interpreter.Repl.repl ()
     | _ -> print_endline "error: expected file name with .aera extension. usage: aera <file>"
 
+ *)
