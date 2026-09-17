@@ -680,3 +680,20 @@ and item par =
     | Struct    -> struct_item (advance par)
     | Const     -> const_item (advance par)
     | _         -> failwith "todo: implement variant_item"
+
+(* -------------------- Parser Function -------------------- *)
+
+let rec parse_helper items par =
+    if par |> is_at_end then        
+        (items, par)
+    else
+        let tok = peek par in 
+        match tok.kind with
+        | Fn | Struct | Const -> 
+            let (item, par') = item par in 
+            par |> parse_helper ( item :: items )
+        | _ -> 
+            let par' = report_error "expected a top level item: function, closure, struct, const" tok par in 
+            (items, par')
+            
+let parse par = par |> parse_helper []
