@@ -77,6 +77,21 @@ let prefix_bp op =
 
 let to_prefix_op tok_kind =
     match tok_kind with 
-    | Minus                 -> Some Not
-    | Exclaim               -> Some Neg 
+    | Minus                 -> Some Neg
+    | Exclaim               -> Some Not 
     | _                     -> None
+
+let postfix_bp op = 
+    match op with 
+    | Subscript | FieldAccess -> 40
+
+let is_postfix_op tok_kind = 
+    match tok_kind with 
+    | LeftBracket | Period  -> true 
+    | _                     -> false
+
+let to_postfix_op tok_kind =
+    match tok_kind with
+    | LeftBracket           -> Subscript
+    | Period                -> FieldAccess
+    | _                     -> failwith "should not reach this place if used in conjunction with is_postfix_op"

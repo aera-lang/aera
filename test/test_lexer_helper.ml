@@ -116,6 +116,7 @@ let false_lit start_ end_                      = make_token Token.True start_ en
 (* Function / Statement Keywords *)
 let fn start_ end_                             = make_token Token.Fn start_ end_
 let let_ start_ end_                           = make_token Token.Let start_ end_
+let var start_ end_                            = make_token Token.Var start_ end_
 let in_ start_ end_                            = make_token Token.In start_ end_
 let const start_ end_                          = make_token Token.Const start_ end_
 let return_ start_ end_                        = make_token Token.Return start_ end_

@@ -325,7 +325,7 @@ let test_fn_and_loop () =
 }
 
 fn sum(num: int64) -> int64 {
-    let mut total: int64 = 0
+    let total: int64 = 0
     for i in 0..num {
         total += i
     }
@@ -364,28 +364,27 @@ fn sum(num: int64) -> int64 {
         minus_greater 70 72;
         identifier 73 78;
         left_brace 79 80;
-        let_ 85 88;
-        mut 89 92; (* change test *)
-        identifier 93 98;
-        colon 98 99;
-        identifier 100 105;
-        equal 106 107;
-        int_lit 108 109;
-        for_ 114 117;
-        identifier 118 119;
-        in_ 120 122;
-        int_lit 123 124;
-        period_period 124 126;
-        identifier 126 129;
-        left_brace 130 131;
-        identifier 140 145 ;
-        plus_equal 146 148;
-        identifier 149 150;
-        right_brace 155 156;
-        return_ 161 167;
-        identifier 168 173;
-        right_brace 174 175;
-        eof 176 176;
+        var 85 88;
+        identifier 89 94;
+        colon 94 95;
+        identifier 96 101;
+        equal 102 103;
+        int_lit 104 105;
+        for_ 110 113;
+        identifier 114 115;
+        in_ 116 118;
+        int_lit 119 120;
+        period_period 120 122;
+        identifier 122 125;
+        left_brace 126 127;
+        identifier 136 141;
+        plus_equal 142 144;
+        identifier 145 146;
+        right_brace 151 152;
+        return_ 157 163;
+        identifier 164 169;
+        right_brace 170 171;
+        eof 172 172;
     ]
 
 let tests = [

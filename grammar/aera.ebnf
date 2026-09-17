@@ -3,7 +3,6 @@ program = { item } EOF ;
 item = function_item 
      | closure_item
      | struct_item
-     | variant_item
      | const_item ;
 
 (* Items *)
@@ -17,9 +16,6 @@ closure_item = "fn" "(" [ parameter_list ] ")" "=>" expression ;
 struct_item = "struct" identifier "{" { field_declaration } "}" ;
 field_declaration = identifier ":" type [ "=" expression ] ;
 
-variant_item = "variant" identifier "{" { variant_case } "}" ;
-variant_case = identifier "(" { field_declaration } ")" ; // NEEDS TO BE SEPARATE -> kinda like parameters
-
 const_item = "const" identifier [ ":" type ] "=" expression ;
 
 (* Expressions *)
@@ -29,19 +25,16 @@ expression = expression_with_block
 
 expression_with_block = block_expression
                       | loop_expression
-                      | if_expression 
-                      | match_expression ;
+                      | if_expression ;
     
 expression_without_block = literal_expression
                          | operator_expression
                          | grouped_expression
+                         | index_expression
                          | call_expression
-                         | break_expression
-                         | return_expression
                          | array_expression
                          | tuple_expression
-                         | struct_expression
-                         | variant_expression ;
+                         | struct_expression ;
 
 block_expression = "{" { statement } [ expression ] "}" ;
 loop_expression = infinite_loop_expression
@@ -52,29 +45,6 @@ while_loop_expression = "while" expression block_expression ;
 
 if_expression = "if" expression block_expression [ "else" block_expression ] ;
 
-match_expression = "match" expression "{" match_case { match_case } "}" ;
-match_case = pattern "=>" expression ;
-
-pattern = literal
-        | identifier
-        | underscore
-        | array_pattern
-        | tuple_pattern
-        | struct_pattern
-        | variant_pattern ;
-
-pattern_list = pattern { ","  pattern } ;
-
-array_pattern = "[" pattern_list "]" ;
-tuple_pattern = "(" tuple_pattern_list ")" ;
-tuple_pattern_list = pattern "," [ pattern_list ] ;
-
-struct_pattern = identifier "{" [ field_pattern_list ] "}" ;
-field_pattern_list = field_pattern { "," field_pattern } ;
-field_pattern = identifier [ ":" pattern ] ;
-
-variant_pattern = identifier "(" [ pattern_list ] ")" ;
-
 literal_expression = literal ;
 operator_expression = assignment_expression
                     | compound_assignment_expression
@@ -82,8 +52,7 @@ operator_expression = assignment_expression
                     | arithmetic_expression
                     | bitwise_expression
                     | logical_expression
-                    | negation_expression 
-                    | type_cast_expression ;
+                    | negation_expression ;
 
 assignment_expression = expression "=" expression ;
 compound_assignment_expression = expression "+=" expression
@@ -123,13 +92,13 @@ negation_expression = "-" expression
             | "!" expression ;
 
 grouped_expression = "(" expression ")" ;
+index_expression = expression "[" expression "]" ;
+field_access_expression = expression "." identifier 
+
 call_expression = expression "(" [ argument_list ] ")" ;
 
 argument_list = argument { ","  argument } ;
 argument = [ identifier ":" ] expression ; 
-
-break_expression = "break" [ expression ] ;
-return_expression = "return" [ expression ] ;
 
 array_expression = "[" expression_list "]" ;
 tuple_expression = "(" tuple_expression_list ")" ;
@@ -138,7 +107,6 @@ tuple_expression_list = expression "," [ expression_list ] ;
 expression_list = expression { ","  expression } ;
 
 struct_expression = call_expression ;
-variant_expression = call_expression ;
 
 statement = item
           | let_statement

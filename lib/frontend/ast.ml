@@ -17,8 +17,11 @@ type binary_op =
 (* Bitwise *)
 | BitAnd | BitOr | BitXor | Shl | Shr
 
-type unary_op =
+type unary_op = (* = prefix_op *)
 | Neg | Not (* - / ! *)
+
+type postfix_op =
+| Subscript | FieldAccess
 
 type assign_op =
 (* Reassignment *)
@@ -49,7 +52,6 @@ and item =
 | FnItem of fn_item
 | ClosureItem of closure_item
 | StructItem of struct_item
-| VariantItem of variant_item
 | ConstItem of const_item
 | ErrorItem of Span.t
 
@@ -82,14 +84,6 @@ and field = {
     expr: expr option; 
 }
 
-(* TODO(ast): Fix the variant case! It isn't correct at all, both in the grammar and the ast. *)
-and variant_case = identifier * (identifier * typ) list (* if the list is empty, the variant carries nothing *)
-            
-and variant_item = {
-    name: identifier;
-    cases: variant_case list;
-}
-
 and const_item = {
     name: identifier;
     typ: typ option;
@@ -102,6 +96,8 @@ and expr =
 | Literal           of literal
 | Ident             of identifier
 | Grouping          of expr
+| Index             of { target: expr; index: expr; }
+| FieldAccess       of { target: expr; field: identifier; }
 | Call              of { callee: expr; args: argument list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
 | Assign            of { lhs: expr; op: assign_op; rhs: expr }
@@ -110,12 +106,8 @@ and expr =
 | InfiniteLoop      of expr
 | WhileLoop         of { cond: expr; body: expr }
 | IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
-| MatchExpr         of match_
-| BreakExpr         of expr option
-| ReturnExpr        of expr option
 | ArrayExpr         of expr list 
 | TupleExpr         of expr list
-| StructExpr        of { name: identifier; fields: (identifier * expr) list }
 | ErrorExpr         of Span.t
 
 and argument = 
@@ -125,31 +117,6 @@ and argument =
 and block = {
     stmts: stmt list;
     expr: expr option; 
-}
-
-and pattern = 
-| LiteralPattern       of literal 
-| IdentPattern         of identifier
-| WildcardPattern
-| ArrayPattern         of pattern list
-| TuplePattern         of pattern list
-| StructPattern        of identifier * field_pattern list
-| VariantPattern       of identifier * pattern list   
-| ErrorPattern         of Span.t  
-
-and field_pattern = {
-    field_name: identifier;
-    field_pattern: pattern option;
-}
-
-and match_case = {
-    pattern: pattern;
-    expr: expr;
-}
-
-and match_ = {
-    cond: expr;
-    cases: match_case list;
 }
 
 (* Statements *)
@@ -172,11 +139,3 @@ and var_stmt = {
     typ: typ option;
     expr: expr;
 }
-
-(* REPL nodes *)
-
-type repl =
-| ReplItem of item
-| ReplExpr of expr
-| ReplStmt of stmt
-

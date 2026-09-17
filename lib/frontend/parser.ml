@@ -103,7 +103,7 @@ and parse_expr_list closing_kind args par =
     if tok.kind = closing_kind then 
         let par' = advance par in (List.rev args, par')
     else
-        let (arg, par') = par |> expr_bp 0 (* change to expr *) in 
+        let (arg, par') = par |> expr (* change to expr *) in 
         let args' = (arg :: args) in 
         let tok' = peek par' in 
 
@@ -116,7 +116,7 @@ and parse_expr_list closing_kind args par =
             let par'' = report_error 
             (Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind)) 
             tok' par' 
-            in (List.rev args, par'')
+            in (List.rev args', par'')
 
 and parse_paren_expr par =
     let (first, par') = par |> expr_bp 0 in 
@@ -142,6 +142,32 @@ and parse_unrecognized tok par =
             let par' = advance par 
             in (ErrorExpr tok.span, par')
 
+(* -------------------- Index Expression -------------------- *)
+
+and parse_index lhs min_bp par =
+    let bp = postfix_bp Subscript in 
+    if bp < min_bp then (lhs, par) 
+    else
+        let par' = advance par in (* consume [ *)
+        let (index, par'') = par' |> expr_bp 0 in 
+        let tok = peek par'' in 
+        let par''' =
+            match tok.kind with 
+            | RightBracket -> advance par'' 
+            | _ -> report_error "expected ']' to close index expression" tok par'' 
+        in
+        par''' |> loop (Index { target = lhs; index = index }) min_bp
+
+(* -------------------- Field Access Expression -------------------- *)
+
+and parse_field_access lhs min_bp par = 
+    let bp = postfix_bp FieldAccess in 
+    if bp < min_bp then (lhs, par) 
+    else
+        let par' = advance par in (* consume . *)
+        let (name, par'') = get_identifier par' in 
+        par'' |> loop (FieldAccess { target = lhs; field = name }) min_bp
+
 (* -------------------- Call Expressions -------------------- *)
 
 and parse_call lhs par =
@@ -157,10 +183,10 @@ and parse_arg par =
         let name = lexeme tok par in 
         let par' = advance par in (* consume identifier *)
         let par'' = advance par' in (* consume ':' *)
-        let (value, par''') = par'' |> expr_bp 0 (* change to expr *) in
+        let (value, par''') = par'' |> expr (* change to expr *) in
                                 (Named {name = name; value = value}, par''')
     | _ ->
-        let (value, par') = par |> expr_bp 0 (* change to expr *) in
+        let (value, par') = par |> expr (* change to expr *) in
         (Positional value, par')
 
 and parse_args_list args par =
@@ -177,7 +203,7 @@ and parse_args_list args par =
             par' |> parse_args_list args'
         else
             let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
-            in (List.rev args, par'')
+            in (List.rev args', par'')
                            
 (* -------------------- Binary & Assign Expressions -------------------- *)
 
@@ -244,6 +270,8 @@ and expr_bp min_bp par =
     | Exclaim                   -> par' |> parse_prefix Not
     (* Grouped Expression *)
     | LeftParen                 -> par' |> parse_paren_expr
+    (* Array Expression *)
+    | LeftBracket               -> par |> parse_array_expr
     (* Invalid Token *)
     | _                         -> par' |> parse_unrecognized tok                       
     in
@@ -254,13 +282,15 @@ and loop lhs min_bp par =
     let tok = peek par in 
     match tok.kind with 
     | EOF                               -> (lhs, par)
-    (* Call Expressions*)
+    (* Index *)
+    | LeftBracket                       -> par |> parse_index lhs min_bp
+    (* Field Access *)
+    | Period                            -> par |> parse_field_access lhs min_bp
+    (* Call Expression *)
     | LeftParen                         -> par |> parse_call lhs
     (* Binary / Assign Operators *)
-    | op when is_binary_op tok.kind     -> par |> parse_binary (to_binary_op tok.kind) lhs min_bp
-    | op when is_assign_op tok.kind     -> par |> parse_assign (to_assign_op tok.kind) lhs min_bp
-    (* Array *)
-    | LeftBracket                       -> par |> parse_array_expr
+    | _ when is_binary_op tok.kind     -> par |> parse_binary (to_binary_op tok.kind) lhs min_bp
+    | _ when is_assign_op tok.kind     -> par |> parse_assign (to_assign_op tok.kind) lhs min_bp
     | _                                 -> (lhs, par)
 
 (* -------------------- Expression With Block -------------------- *)
@@ -268,13 +298,10 @@ and loop lhs min_bp par =
 and expr par =
     let tok = peek par in 
     match tok.kind with
-    | LeftBrace -> let par' = advance par in par' |> block
-    | If        -> let par' = advance par in par' |> if_expr
-    | While     -> let par' = advance par in par' |> while_expr 
-    | Loop      -> let par' = advance par in par' |> loop_expr
-    (*| Match     -> let par' = advance par in par' |> match_expr*)
-    | Break     -> let par' = advance par in par' |> break_expr
-    | Return    -> let par' = advance par in par' |> return_expr
+    | If        -> (advance par) |> if_expr
+    | While     -> (advance par) |> while_expr 
+    | Loop      -> (advance par) |> loop_expr
+    | LeftBrace -> par |> block
     | _         -> par |> expr_bp 0 (* expression without block *)
 
 (* -------------------- Block -------------------- *)
@@ -296,9 +323,8 @@ and parse_block stmts par =
 and block par =
     let tok = peek par in 
     match tok.kind with 
-    | LeftBrace  -> let par' = advance par in 
-                    let (stmts, expr_opt, par'') = par' |> parse_block [] in 
-                    (Block {stmts = stmts; expr = expr_opt}, par'')
+    | LeftBrace  -> let (stmts, expr_opt, par') = (advance par) |> parse_block [] in 
+                    (Block {stmts = stmts; expr = expr_opt}, par')
     | _  -> let par' = report_error "expected { before block expression" tok par in 
             (ErrorExpr tok.span, par') 
 
@@ -310,9 +336,8 @@ and if_expr par =
     let tok = peek par'' in 
     match tok.kind with 
     | Else -> 
-        let par''' = advance par'' in 
-        let (else_block, par'''') = block par''' in 
-        (IfExpr {cond = cond; then_branch = then_block; else_branch = Some else_block}, par'''')
+        let (else_block, par''') = block (advance par'') in 
+        (IfExpr {cond = cond; then_branch = then_block; else_branch = Some else_block}, par''')
     | _ -> (IfExpr {cond = cond; then_branch = then_block; else_branch = None}, par'')
 
 (* -------------------- Loop Expressions -------------------- *)
@@ -325,146 +350,6 @@ and while_expr par =
 and loop_expr par = 
     let (body, par') = block par in
     (InfiniteLoop body, par')
-
-(* -------------------- Match Expression -------------------- *)
-
-(*and match_expr par =
-    let (expr_, par') = expr par in 
-    let tok = peek par' in 
-    match tok.kind with 
-    | LeftBrace -> let par'' = advance par' in par'' |> match_cases [] 
-    | _ -> let par' = report_error "expected { before match expression" tok par in 
-            (ErrorExpr tok.span, par') 
-
-
-and match_cases cases par = []
-
-and match_case par = ()
-
-(* 
-
-match_case = pattern "=>" expression ;
-
-*)
-
-(* -------------------- Patterns -------------------- *)
-
-and pattern par =
-    let (tok, par') = next par in 
-    match tok.kind with 
-    (* Literals *)
-    | IntLiteral -> 
-        let (value, par'') = par' |> parse_int_pattern tok in 
-        (value, par'')
-    | FloatLiteral -> 
-        let (value, par'') = par' |> parse_float_pattern tok in 
-        (value, par'')
-    | CharLiteral -> 
-        let (value, par'') = par' |> parse_char_pattern tok in 
-        (value, par'')
-    | StringLiteral ->
-        let (value, par'') = par' |> parse_string_pattern tok in 
-        (value, par'')
-    | True ->
-        let (value, par'') = par' |> parse_bool_pattern true in 
-        (value, par'')
-    | False ->
-        let (value, par'') = par' |> parse_bool_pattern false in 
-        (value, par'')
-    (* Identifier *)
-    | Identifier -> (* have to check for variant here *)
-        let tok' = peek par' in 
-        begin 
-            match tok'.kind with 
-            | LeftBrace -> 
-                let par'' = advance par' in par'' |> parse_variant_pattern
-            | LeftParen -> 
-                let par'' = advance par' in par'' |> parse_struct_pattern
-            | _ ->  let (value, par'') = par' |> parse_ident_pattern tok in 
-                    (value, par'')
-        end
-    (* Wildcard *)
-    | Underscore ->
-        (WildcardPattern, par')
-    (* Array Pattern *)
-    | LeftBracket ->
-        let (value, par'') = par' |> parse_array_pattern in 
-        (value, par'')
-    (* Tuple Pattern *)
-    | LeftBrace ->
-        let (value, par'') = par' |> parse_array_pattern in 
-        (value, par'')
-    (* Invalid Pattern*)
-    | _ -> let par' = report_error "expected pattern in match case" tok par 
-                    in (ErrorPattern tok.span, par')
-
-(* -------------------- Literal Patterns -------------------- *)
-
-and parse_int_pattern tok par =
-    match Int64.of_string_opt (lexeme tok par) with
-    | Some value    -> (LiteralPattern (IntLiteral value), par)
-    | None          -> let par' = report_error "could not parse integer" tok par 
-                        in (ErrorPattern tok.span, par')
-
-and parse_float_pattern tok par = 
-    match float_of_string_opt (lexeme tok par) with
-    | Some value    -> (LiteralPattern (FloatLiteral value), par)
-    | None          -> let par' = report_error "could not parse float" tok par 
-                        in (ErrorPattern tok.span, par')
-
-and parse_char_pattern tok par =
-    match char_of_string (lexeme tok par) with
-    | Some value    -> (LiteralPattern (CharLiteral value), par)
-    | None          -> let par' = report_error "could not parse character" tok par 
-                        in (ErrorPattern tok.span, par')
-and parse_string_pattern tok par =
-    let value = lexeme tok par in (LiteralPattern (StringLiteral value), par)
-
-and parse_bool_pattern value par = (LiteralPattern (BoolLiteral value), par)
-
-(* -------------------- Identifier Pattern -------------------- *)
-
-and parse_ident_pattern tok par =
-    let value = lexeme tok par in (IdentPattern value, par)
-
-    
-
-(* 
-
-pattern_list = pattern { ","  pattern } ;
-
-array_pattern = "[" pattern_list "]" ;
-tuple_pattern = "(" tuple_pattern_list ")" ;
-tuple_pattern_list = pattern "," [ pattern_list ] ;
-
-struct_pattern = identifier "{" [ field_pattern_list ] "}" ;
-field_pattern_list = field_pattern { "," field_pattern } ;
-field_pattern = identifier [ ":" pattern ] ;
-
-variant_pattern = identifier "(" [ pattern_list ] ")" ;
-
-
-*)
-
-*)
-
-(* -------------------- Break Expression -------------------- *)
-
-and break_expr par = 
-    match (peek par).kind with 
-    | RightBrace | EOF -> (BreakExpr None, par)
-    | _ ->
-        let (value, par') = expr par in 
-        (BreakExpr (Some value), par')
-
-(* -------------------- Return Expression -------------------- *)
-
-and return_expr par = 
-    match (peek par).kind with 
-    | RightBrace | EOF -> (ReturnExpr None, par)
-    | _ -> 
-        let (value, par') = expr par in 
-        (ReturnExpr (Some value), par')
 
 (* -------------------- Types -------------------- *)
 
@@ -557,7 +442,7 @@ and parse_type_list types par =
             par' |> parse_type_list types'
         else
             let par'' = report_error "expected ',' or ')' after type" tok' par' 
-            in (List.rev types, par'')
+            in (List.rev types', par'')
 
 (* -------------------- Let Statement  -------------------- *)
 
@@ -622,12 +507,12 @@ and fn_item par =
                 let par'''' = advance par''' in
                 par'''' |> parse_fn_body name params
             | _ -> 
-                let par''' = report_error "expected ')' after function parameters" tok par'' in
-                (ErrorItem tok.span, par''')
+                let par'''' = report_error "expected ')' after function parameters" tok' par''' in
+                par'''' |> parse_fn_body name params
         end
     | _ -> 
         let par''' = report_error "expected '(' after function name" tok par'' in 
-        (ErrorItem tok.span, par''')
+        (FnItem { name = name; params = []; return_type = None; body = ErrorExpr tok.span; }, par''')
 
 and parse_fn_body name params par =
     let tok = peek par in 
@@ -672,7 +557,7 @@ and parse_params_list ~type_required params par =
             par' |> parse_params_list ~type_required params'
         else
             let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
-            in (List.rev params, par'')
+            in (List.rev params', par'')
 
 (* -------------------- Closure Item -------------------- *)
 
@@ -689,10 +574,10 @@ and closure_item par =
                 par''' |> parse_closure_body params
             | _ -> 
                 let par''' = report_error "expected ')' after closure parameters" tok par'' in
-                (ErrorItem tok.span, par''')
+                (ClosureItem { params = params; body = ErrorExpr tok.span }, par''')
         end
     | _ -> 
-        let par'' = report_error "expected '(' before closure parameters" tok par' in 
+        let par'' = report_error "expected '(' to start closure parameters" tok par' in 
         (ErrorItem tok.span, par'')
 
 and parse_closure_body params par =
@@ -704,7 +589,7 @@ and parse_closure_body params par =
         (ClosureItem { params = params; body = expr; }, par'')
     | _ -> 
         let par' = report_error "expected '=>' to follow after closure parameters" tok par in 
-        (ErrorItem tok.span, par')
+        (ClosureItem { params = params; body = ErrorExpr tok.span }, par')
 
 (* -------------------- Struct Item -------------------- *)
 
@@ -718,7 +603,7 @@ and struct_item par =
         (StructItem { name = name; fields = fields; }, par'''')
     | _ -> 
         let par''' = report_error "expected '{' after struct name" tok par'' in 
-        (ErrorItem tok.span, par''')
+        (StructItem { name = name; fields = [] }, par''')
 
 (* -------------------- Field Declarations -------------------- *)
 
@@ -734,32 +619,26 @@ and parse_field par =
             match tok'.kind with 
             | Equal -> 
                 let (expr, par'''') = expr (advance par''') in 
-                ({ field_name = name; field_typ = typ; expr = Some expr; }, par''')
+                ({ field_name = name; field_typ = typ; expr = Some expr; }, par'''')
             | _ ->
                 ({ field_name = name; field_typ = typ; expr = None; }, par''')
         end
     | _ -> let par'' = report_error "expected ':' after field name" tok par' in 
             ({field_name = name; field_typ = ErrorType tok.span; expr = None; }, par'')   
         
-and parse_field_decls fields par =
+and parse_field_decls fields par = (* need to fix actually *)
     let tok = peek par in 
-    if tok.kind = RightParen then 
+    if tok.kind = RightBrace then 
         let par' = advance par in (List.rev fields, par')
     else
         let (field, par') = par |> parse_field in 
         let fields' = field :: fields in 
         let tok = peek par' in 
-        if tok.kind = Comma then 
-            let par'' = advance par' in par'' |> parse_field_decls fields'
-        else if tok.kind = RightParen then 
+        if tok.kind = RightBrace then 
             par' |> parse_field_decls fields'
         else
-            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
-            in (List.rev fields, par'')
-      
-(* -------------------- Variant Item -------------------- *)
-
-(* -------------------- Variant Case -------------------- *)
+            let par'' = report_error  "expected ')' to close field decls" tok par' 
+            in (List.rev fields', par'')
 
 (* -------------------- Const Item -------------------- *)
 
@@ -769,14 +648,22 @@ and const_item par =
     match tok.kind with 
     | Colon -> 
         let (typ, par''') = parse_typ par'' in 
-        let (expr, par'''') = expr (advance par''') in 
-        (ConstItem { name = name; typ = Some typ; expr = expr }, par''')
+        let tok' = peek par''' in 
+        begin
+            match tok'.kind with 
+            | Equal -> 
+                let (expr, par'''') = expr (advance par''') in 
+                (ConstItem { name = name; typ = Some typ; expr = expr }, par'''')
+            | _ -> 
+                let par'''' = report_error "expected '=' after type in const item" tok' par''' in 
+                (ConstItem { name = name; typ = Some typ; expr = ErrorExpr tok'.span }, par'''')
+        end
     | Equal -> 
         let (expr, par''') = expr par'' in 
         (ConstItem { name = name; typ = None; expr = expr }, par''')
     | _ -> 
         let par''' = report_error "expected '=' after identifier in const item" tok par'' in 
-        (ErrorItem tok.span, par''')
+        (ConstItem { name = name; typ = None; expr = ErrorExpr tok.span }, par''')
 
 (* -------------------- Item -------------------- *)
 
