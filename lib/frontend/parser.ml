@@ -5,6 +5,7 @@ open Token
 open Op
 open Source
 open Typ
+open Utils
 
 type t = {
     source: Source.t;
@@ -74,16 +75,20 @@ let parse_float tok par =
     | Some value    -> (Literal (FloatLiteral value), par)
     | None          -> let par' = report_error "could not parse float" tok par 
                        in (ErrorExpr tok.span, par')
-
 let parse_char tok par =
-    match char_of_string (lexeme tok par) with
-    | Some value    -> (Literal (CharLiteral value), par)
-    | None          -> let par' = report_error "could not parse character" tok par 
-                       in (ErrorExpr tok.span, par')
-
+    let raw = lexeme tok par in 
+    let inner = String.sub raw 1 (String.length raw - 2) in
+    match decode_char inner with 
+    | Ok char        -> (Literal (CharLiteral char), par)
+    | Error msg      -> let par' = report_error msg tok par 
+                        in (ErrorExpr tok.span, par')
 let parse_string tok par =
-    let value = lexeme tok par in (Literal (StringLiteral value), par)
-
+    let raw = lexeme tok par in 
+    let inner = String.sub raw 1 (String.length raw - 2) in
+    match decode_string inner with 
+    | Ok str        -> (Literal (StringLiteral str), par)
+    | Error msg      -> let par' = report_error msg tok par 
+                        in (ErrorExpr tok.span, par')
 let parse_bool value par = (Literal (BoolLiteral value), par)
 
 (* -------------------- Identifier -------------------- *)

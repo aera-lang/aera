@@ -6,7 +6,6 @@ let decode_escape c =
     | '\\' -> Ok '\\'
     | '\'' -> Ok '\''
     | '"' -> Ok '"'
-    | '/' -> Ok '/'
     | _ -> Error ("invalid escape sequence: \\" ^ String.make 1 c)
 
 let decode_char raw =

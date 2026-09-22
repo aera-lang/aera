@@ -4,6 +4,28 @@ open Typ
 
 (* -------------------- Helper Functions -------------------- *)
 
+let escape_char c =
+    match c with
+    | '\n'   -> "\\n"
+    | '\t'   -> "\\t"
+    | '\r'   -> "\\r"
+    | '\\'  -> "\\\\"
+    | '\''  -> "\\'"
+    | c     -> String.make 1 c
+
+let escape_string s =
+    let buf = Buffer.create (String.length s) in 
+    String.iter (fun c ->
+        match c with 
+        | '\n'  -> Buffer.add_string buf "\\n"
+        | '\t' -> Buffer.add_string buf "\\t"
+        | '\r' -> Buffer.add_string buf "\\r"
+        | '\\' -> Buffer.add_string buf "\\\\"
+        | '\"' -> Buffer.add_string buf "\\\""
+        | c     -> Buffer.add_char buf c
+    ) s;
+    Buffer.contents buf
+
 let format_binary_op op =
     match op with 
     | Add       -> "+"
@@ -43,6 +65,7 @@ let format_assign_op op =
     | XorAssign         -> "^="
     | ShlAssign         -> "<<="
     | ShrAssign         -> ">>="
+    
 let format_primitive_typ typ = 
     match typ with 
     | Int8  -> "int8"
@@ -66,8 +89,8 @@ let rec walk_expr expr =
     match expr with 
     | Literal (IntLiteral n)                            -> [(Int64.to_string n)]
     | Literal (FloatLiteral f)                          -> [(string_of_float f)]
-    | Literal (CharLiteral c)                           -> ["'" ^ (String.make 1 c) ^ "'"]
-    | Literal (StringLiteral s)                         -> ["\"" ^ s  ^ "\""]
+    | Literal (CharLiteral c)                           -> ["'" ^ escape_char c ^ "'"]
+    | Literal (StringLiteral s)                         -> ["\"" ^  escape_string s ^ "\""]
     | Literal (BoolLiteral b)                           -> [(Bool.to_string b)]
     | Ident s                                           -> [s]
     | Grouping expr'                                    -> walk_grouping expr'
@@ -148,7 +171,7 @@ and walk_expr_list exprs =
     | [e]           -> walk_expr e 
     | e :: rest   -> (walk_expr e) @ [","] @ walk_expr_list rest
 
-and walk_error_expr span = ["<error>"]
+and walk_error_expr span = ["<error_expr>"]
 
 (* -------------------- Types -------------------- *)
 
@@ -190,7 +213,7 @@ and walk_item item =
     | ClosureItem { params; body }                  -> walk_closure params body
     | StructItem { name; fields }                   -> walk_struct name fields
     | ConstItem { name; typ; expr }                 -> walk_const name typ expr
-    | ErrorItem _                                   -> ["<error item>"]
+    | ErrorItem _                                   -> ["<error_item>"]
 
 and walk_param param =
     match param.param_typ with 

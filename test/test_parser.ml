@@ -31,7 +31,8 @@ let item_testable = Alcotest.testable pp_item ( = )
 
 let check_round_trip msg input =
     let (ast1, _) = parse_source input in
-    
+    print_endline (Pretty.to_source ast1);
+
     let printed = Pretty.to_source ast1 in
     let (ast2, _) = parse_source printed in
     Alcotest.(check (list item_testable)) msg ast1 ast2
@@ -48,21 +49,31 @@ Other tests will test multiple items, as well as other edge cases.
 
 *)
 
-(* -------------------- Const Tests -------------------- *)
+(* -------------------- Literal Tests -------------------- *)
 
-let test_const_int_literal () = check_round_trip "int" "const x = 5"
-let test_const_float_literal () = check_round_trip "float" "const x = 3.14"
-let test_const_char_literal () = check_round_trip "char" "const x = 'a'"
-let test_const_string_literal () = check_round_trip "string" "const x = \"hello\""
-let test_const_bool_literal () = check_round_trip "bool" "const x = true"
+(* These tests use const, which is similar to a let binding but is known at compile time -> no runtime values allowed / nor changing the value *)
+
+let test_int_literal () = check_round_trip "int" "const x = 5"
+let test_float_literal () = check_round_trip "float" "const x = 3.14"
+let test_char_literal () = check_round_trip "char" "const x = 'a'"
+let test_string_literal () = check_round_trip "string" "const x = \"hello\""
+let test_bool_literal () = check_round_trip "bool" "const x = true"
+let test_escaped_char () = check_round_trip "escaped char" "const x = '\\n'"
+let test_escaped_string () = check_round_trip "escaped string" "const x = \"a\\\"b\""
+let test_string_with_quote () = check_round_trip "string with apostrophe" " const x = \" it's fine\""
+let test_negative_int () = check_round_trip "negative int" "const x = -5"
 
 let tests = [
-    ("const literals", [
-        Alcotest.test_case "const int literal" `Quick test_const_int_literal;
-        Alcotest.test_case "const float literal" `Quick test_const_float_literal;
-        Alcotest.test_case "const char literal" `Quick test_const_char_literal;
-        Alcotest.test_case "const string literal" `Quick test_const_string_literal;
-        Alcotest.test_case "const bool literal" `Quick test_const_bool_literal;
+    ("literals", [
+        Alcotest.test_case "int literal" `Quick test_int_literal;
+        Alcotest.test_case "float literal" `Quick test_float_literal;
+        Alcotest.test_case "char literal" `Quick test_char_literal;
+        Alcotest.test_case "string literal" `Quick test_string_literal;
+        Alcotest.test_case "bool literal" `Quick test_bool_literal;
+        Alcotest.test_case "escaped char literal" `Quick test_escaped_char;
+        Alcotest.test_case "escaped string literal" `Quick test_escaped_string;
+        Alcotest.test_case "string with apostrophe" `Quick test_string_with_quote;
+        Alcotest.test_case "negative int literal" `Quick test_negative_int;
     ]);
 ]
 
