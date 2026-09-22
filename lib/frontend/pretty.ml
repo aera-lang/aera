@@ -65,9 +65,9 @@ let format_primitive_typ typ =
 let rec walk_expr expr =
     match expr with 
     | Literal (IntLiteral n)                            -> [(Int64.to_string n)]
-    | Literal (FloatLiteral f)                          -> ["\"" ^ (string_of_float f) ^ "\""]
+    | Literal (FloatLiteral f)                          -> [(string_of_float f)]
     | Literal (CharLiteral c)                           -> ["'" ^ (String.make 1 c) ^ "'"]
-    | Literal (StringLiteral s)                         -> [s]
+    | Literal (StringLiteral s)                         -> ["\"" ^ s  ^ "\""]
     | Literal (BoolLiteral b)                           -> [(Bool.to_string b)]
     | Ident s                                           -> [s]
     | Grouping expr'                                    -> walk_grouping expr'
