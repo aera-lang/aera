@@ -325,7 +325,7 @@ let test_fn_and_loop () =
 }
 
 fn sum(num: int64) -> int64 {
-    let total: int64 = 0
+    var total: int64 = 0
     for i in 0..num {
         total += i
     }

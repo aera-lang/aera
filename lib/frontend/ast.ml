@@ -40,9 +40,9 @@ type literal =
 | StringLiteral of string
 | BoolLiteral of bool
 
-(* Identifiers *)
+(* strings *)
 
-type identifier = string
+(* type identifier = string *)
 
 (* Program *)
 
@@ -57,7 +57,7 @@ and item =
 
 
 and fn_item = {
-    name: identifier;
+    name: string;
     params: param list;
     return_type: typ option; (* if omitted, infer *)
     body: expr;
@@ -69,23 +69,23 @@ and closure_item = {
 }
 
 and param = {
-    param_name: identifier;
+    param_name: string;
     param_typ: typ option;
 }
 
 and struct_item = {
-    name: identifier;
+    name: string;
     fields: field list;
 }
 
 and field = {
-    field_name: identifier;
+    field_name: string;
     field_typ: typ;
     expr: expr option; 
 }
 
 and const_item = {
-    name: identifier;
+    name: string;
     typ: typ option;
     expr: expr;
 }
@@ -94,10 +94,10 @@ and const_item = {
 
 and expr =
 | Literal           of literal
-| Ident             of identifier
+| Ident             of string
 | Grouping          of expr
 | Index             of { target: expr; index: expr; }
-| FieldAccess       of { target: expr; field: identifier; }
+| FieldAccess       of { target: expr; field: string; }
 | Call              of { callee: expr; args: argument list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
 | Assign            of { lhs: expr; op: assign_op; rhs: expr }
@@ -112,7 +112,7 @@ and expr =
 
 and argument = 
 | Positional of expr 
-| Named of { name: identifier; value: expr; }
+| Named of { name: string; value: expr; }
 
 and block = {
     stmts: stmt list;
@@ -129,13 +129,13 @@ and stmt =
 | ErrorStmt         of Span.t
 
 and let_stmt = { 
-    name: identifier;
+    name: string;
     typ: typ option;
     expr: expr;
 }
 
 and var_stmt = { 
-    name: identifier;
+    name: string;
     typ: typ option;
     expr: expr;
 }
