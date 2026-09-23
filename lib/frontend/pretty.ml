@@ -163,7 +163,9 @@ and walk_array_expr exprs =
     ["["] @ (walk_expr_list exprs) @ ["]"]
 
 and walk_tuple_expr exprs = 
-    ["("] @ (walk_expr_list exprs) @ [")"]
+    match exprs with 
+    | [e]   -> ["("] @ (walk_expr e) @ [",)"]
+    | _     -> ["("] @ (walk_expr_list exprs) @ [")"]
 
 and walk_expr_list exprs =
     match exprs with 

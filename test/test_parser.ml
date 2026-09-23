@@ -49,7 +49,7 @@ Other tests will test multiple items, as well as other edge cases.
 
 *)
 
-(* -------------------- Literal Tests -------------------- *)
+(* -------------------- Literal Expression Tests -------------------- *)
 
 (* These tests use const, which is similar to a let binding but is known at compile time -> no runtime values allowed / nor changing the value *)
 
@@ -63,6 +63,27 @@ let test_escaped_string () = check_round_trip "escaped string" "const x = \"a\\\
 let test_string_with_quote () = check_round_trip "string with apostrophe" " const x = \" it's fine\""
 let test_negative_int () = check_round_trip "negative int" "const x = -5"
 
+(* -------------------- Expression Without Block Tests -------------------- *)
+
+let test_binary_precedence () = check_round_trip "precedence" "const x = 1 + 2 * 3"
+let test_grouping () = check_round_trip "grouping" "const x = (1 + 2) * 3"
+let test_tuple () = check_round_trip "tuple" "const x = (1, 2, 3)"
+let test_single_tuple () = check_round_trip "tuple" "const x = (1,)"
+let test_fixed_array () = check_round_trip "fixed array" "const x = [1, 2, 3]"
+let test_index () = check_round_trip "index" "const x = arr[0]"
+let test_field_access () = check_round_trip "field access" "const x = obj.field"
+let test_call () = check_round_trip "call" "const x = f(1, 2)"
+let test_named_arg () = check_round_trip "named arg" "const x = f(a: 1, b: 2)"
+let test_chained () = check_round_trip "chained postfix" "const x = a.b[0].c(1)"
+
+(* -------------------- Expressions With Block Tests -------------------- *)
+
+(* -------------------- Items Tests -------------------- *)
+
+
+(* -------------------- Parser Tests -------------------- *)
+
+
 let tests = [
     ("literals", [
         Alcotest.test_case "int literal" `Quick test_int_literal;
@@ -74,6 +95,18 @@ let tests = [
         Alcotest.test_case "escaped string literal" `Quick test_escaped_string;
         Alcotest.test_case "string with apostrophe" `Quick test_string_with_quote;
         Alcotest.test_case "negative int literal" `Quick test_negative_int;
+    ]);
+    ("expression_without_block", [
+        Alcotest.test_case "binary precedence" `Quick test_binary_precedence;
+        Alcotest.test_case "grouping" `Quick test_grouping;
+        Alcotest.test_case "tuple" `Quick test_tuple;
+        Alcotest.test_case "single tuple" `Quick test_single_tuple;
+        Alcotest.test_case "fixed array" `Quick test_fixed_array;
+        Alcotest.test_case "index" `Quick test_index;
+        Alcotest.test_case "field access" `Quick test_field_access;
+        Alcotest.test_case "call" `Quick test_call;
+        Alcotest.test_case "named arg" `Quick test_named_arg;
+        Alcotest.test_case "chained postfix" `Quick test_chained;
     ]);
 ]
 
