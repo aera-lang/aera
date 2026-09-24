@@ -143,9 +143,7 @@ and parse_unrecognized tok par =
             let msg = Printf.sprintf "unsupported token in language: %s" (lexeme tok par) in
             par |> report_error msg tok
         else par
-        in 
-            let par' = advance par 
-            in (ErrorExpr tok.span, par')
+    in (ErrorExpr tok.span, (advance par))
 
 (* -------------------- Index Expression -------------------- *)
 
@@ -188,10 +186,10 @@ and parse_arg par =
         let name = lexeme tok par in 
         let par' = advance par in (* consume identifier *)
         let par'' = advance par' in (* consume ':' *)
-        let (value, par''') = par'' |> expr (* change to expr *) in
+        let (value, par''') = par'' |> expr in
                                 (Named {name = name; value = value}, par''')
     | _ ->
-        let (value, par') = par |> expr (* change to expr *) in
+        let (value, par') = par |> expr in
         (Positional value, par')
 
 and parse_args_list args par =
@@ -488,7 +486,7 @@ and var_stmt par =
 and stmt par = 
     let tok = peek par in 
     match tok.kind with 
-    | Fn | Struct | Variant -> 
+    | Fn | Struct | Const -> 
         let (item_stmt, par') = item par in
         (Item item_stmt, par')
     | Let -> let_stmt (advance par)
@@ -505,16 +503,7 @@ and fn_item par =
     match tok.kind with 
     | LeftParen -> 
         let (params, par''') = par'' |> parse_params_list ~type_required:true [] in 
-        let tok' = peek par''' in 
-        begin
-            match tok'.kind with 
-            | RightParen -> 
-                let par'''' = advance par''' in
-                par'''' |> parse_fn_body name params
-            | _ -> 
-                let par'''' = report_error "expected ')' after function parameters" tok' par''' in
-                par'''' |> parse_fn_body name params
-        end
+        par''' |> parse_fn_body name params
     | _ -> 
         let par''' = report_error "expected '(' after function name" tok par'' in 
         (FnItem { name = name; params = []; return_type = None; body = ErrorExpr tok.span; }, par''')
@@ -571,16 +560,7 @@ and closure_item par =
     match tok.kind with 
     | LeftParen -> 
         let (params, par'') = par' |> parse_params_list ~type_required:false [] in 
-        let tok' = peek par'' in 
-        begin
-            match tok'.kind with 
-            | RightParen ->
-                let par''' = advance par'' in
-                par''' |> parse_closure_body params
-            | _ -> 
-                let par''' = report_error "expected ')' after closure parameters" tok par'' in
-                (ClosureItem { params = params; body = ErrorExpr tok.span }, par''')
-        end
+        par'' |> parse_closure_body params
     | _ -> 
         let par'' = report_error "expected '(' to start closure parameters" tok par' in 
         (ErrorItem tok.span, par'')
@@ -603,9 +583,8 @@ and struct_item par =
     let (tok, par'') = next par' in
     match tok.kind with 
     | LeftBrace -> 
-        let par''' = advance par'' in 
-        let (fields, par'''') = par''' |> parse_field_decls [] in 
-        (StructItem { name = name; fields = fields; }, par'''')
+        let (fields, par''') = par'' |> parse_field_decls [] in 
+        (StructItem { name = name; fields = fields; }, par''')
     | _ -> 
         let par''' = report_error "expected '{' after struct name" tok par'' in 
         (StructItem { name = name; fields = [] }, par''')
@@ -630,20 +609,18 @@ and parse_field par =
         end
     | _ -> let par'' = report_error "expected ':' after field name" tok par' in 
             ({field_name = name; field_typ = ErrorType tok.span; expr = None; }, par'')   
-        
-and parse_field_decls fields par = (* need to fix actually *)
+
+and parse_field_decls fields par =
     let tok = peek par in 
-    if tok.kind = RightBrace then 
+    if tok.kind = RightParen then 
         let par' = advance par in (List.rev fields, par')
+    else if is_at_end par then 
+        let par' = report_error "expected '}' to close struct fields" tok par
+        in (List.rev fields, par')
     else
-        let (field, par') = par |> parse_field in 
+        let (field, par') = par |> parse_field in
         let fields' = field :: fields in 
-        let tok = peek par' in 
-        if tok.kind = RightBrace then 
-            par' |> parse_field_decls fields'
-        else
-            let par'' = report_error  "expected ')' to close field decls" tok par' 
-            in (List.rev fields', par'')
+        par' |> parse_field_decls fields' 
 
 (* -------------------- Const Item -------------------- *)
 

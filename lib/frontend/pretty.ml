@@ -156,7 +156,7 @@ and walk_while_loop cond body =
 and walk_if cond then_branch else_branch =
     let base = ["if"] @ (walk_expr cond) @ (walk_expr then_branch) in 
     match else_branch with 
-    | Some e        -> base @ (walk_expr e)
+    | Some e        -> base @ ["else"] @ (walk_expr e)
     | None          -> base
 
 and walk_array_expr exprs = 
@@ -219,7 +219,7 @@ and walk_item item =
 
 and walk_param param =
     match param.param_typ with 
-    | Some t    -> [param.param_name; ";"; format_typ t]
+    | Some t    -> [param.param_name; ":"; format_typ t]
     | None      -> [param.param_name]
 
 and walk_params params = 
@@ -237,7 +237,7 @@ and walk_fn name params return_type body =
 
 
 and walk_closure params body =
-    ["fn"; "("] @ (walk_params params) @ [")"] @ (walk_expr body)
+    ["fn"; "("] @ (walk_params params) @ [")"] @ ["=>"] @ (walk_expr body)
 
 and walk_struct name fields =
     ["struct"; name; "{"] @ (List.concat_map walk_field fields) @ ["}"]
