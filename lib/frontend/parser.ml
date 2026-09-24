@@ -612,7 +612,7 @@ and parse_field par =
 
 and parse_field_decls fields par =
     let tok = peek par in 
-    if tok.kind = RightParen then 
+    if tok.kind = RightBrace then 
         let par' = advance par in (List.rev fields, par')
     else if is_at_end par then 
         let par' = report_error "expected '}' to close struct fields" tok par

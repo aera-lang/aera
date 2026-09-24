@@ -1,0 +1,8 @@
+fn greet(name: string) {
+    println("Hello, " + name)
+}
+
+fn main() {
+    let name = "Alice"
+    greet(name)
+}

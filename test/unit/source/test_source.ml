@@ -3,7 +3,7 @@ open Source
 open Span
 open Position
 
-(* Helper Functions *)
+(* -------------------- Helper Functions -------------------- *)
 
 let span start_ end_ = { start_; end_ }
 let pos line col = { line; col }
@@ -24,7 +24,7 @@ let equal_pos (a : Position.t) (b : Position.t) =
 
 let pos_testable = Alcotest.testable pp_pos equal_pos
 
-(* Testing Each Function *)
+(* -------------------- Source Function Tests -------------------- *)
 
 let check_line_spans msg expected src =
     Alcotest.(check (array span_testable)) msg expected src.line_spans
@@ -47,7 +47,7 @@ let check_get_line msg expected line src =
 let check_line_containing msg expected offset src =
     Alcotest.(check (result span_testable string)) msg expected (src |> line_containing offset)
 
-(* Line Spans Tests (via Create) *)
+(* -------------------- Line Spans Tests -------------------- *)
 
 let test_single_line_no_newline () =
     let src = create "hello world" "test.aera" in
@@ -82,7 +82,7 @@ let test_filename_and_contents_preserved () =
     Alcotest.(check string) "contents" "abc" src.contents;
     Alcotest.(check string) "filename" "my_file.aera" src.filename
 
-(* Line_From_Offset Sets *)
+(* -------------------- Line From Offset Tests -------------------- *)
 
 let src2 () = create "line1\nline2\nline3" "test.aera"
 
@@ -112,7 +112,7 @@ let test_line_from_offset_negative () =
     check_line_from_offset "negative offset -> Error"
         (Error "offset is before the start of the source") (-1) (src2 ())
 
-(* Offset_To_Pos Tests *)
+(* -------------------- Offset To Position Tests -------------------- *)
 
 let test_offset_to_pos_start () =
     check_offset_to_pos "offset 0" (Ok (pos 1 1)) 0 (src2 ())
@@ -130,7 +130,7 @@ let test_offset_to_pos_out_of_range () =
     check_offset_to_pos "offset out of range"
         (Error "offset is beyond the end of the source") 100 (src2 ())
 
-(* Span_To_Pos Tests *)
+(* -------------------- Span To Position Tests -------------------- *)
 
 let test_span_to_pos_within_one_line () =
     check_span_to_pos "line2 span" (Ok (pos 2 1, pos 2 6)) (span 6 11) (src2 ())
@@ -143,7 +143,7 @@ let test_span_to_pos_invalid_end () =
     check_span_to_pos "valid start, out-of-range end"
         (Error "offset is beyond the end of the source") (span 0 100) (src2 ())
 
-(* Extract Tests *)
+(* -------------------- Extract Tests -------------------- *)
 
 let test_extract_line () =
     check_extract "extract line2" "line2" (span 6 11) (src2 ())
@@ -154,7 +154,8 @@ let test_extract_partial () =
 let test_extract_empty_span () =
     check_extract "zero-width span" "" (span 4 4) (src2 ())
 
-(* Get Line Tests *)
+(* -------------------- Get Line Tests -------------------- *)
+
 let test_get_line_first () =
     check_get_line "line 1" (Ok "line1") 1 (src2 ())
 
@@ -171,7 +172,7 @@ let test_get_line_zero () =
 let test_get_line_too_large () =
     check_get_line "line beyond count -> Error" (Error "line index out of range") 4 (src2 ())
 
-(* Line Containing Tests *)
+(* -------------------- Line Containing Tests -------------------- *)
 
 let test_line_containing_start_of_line () =
     check_line_containing "offset 6 -> line2 span" (Ok (span 6 11)) 6 (src2 ())
@@ -233,3 +234,8 @@ let tests = [
         Alcotest.test_case "out of range" `Quick test_line_containing_out_of_range;
     ]);
 ]
+
+(* -------------------- Driver Function -------------------- *)
+
+let () =
+    Alcotest.run "Source" tests

@@ -37,21 +37,7 @@ let check_round_trip msg input =
     let (ast2, _) = parse_source printed in
     Alcotest.(check (list item_testable)) msg ast1 ast2
 
-(* -------------------- BASIC TESTS -------------------- *)
-
-(*
-
-The following tests test the functionality of parser at the most basic level: items.
-These tests check that the parser is correctly parsing top-level items with ONLY one item.
-
-For example: const x = 5 -> const is the only top-level item.
-Other tests will test multiple items, as well as other edge cases.
-
-*)
-
 (* -------------------- Literal Expression Tests -------------------- *)
-
-(* These tests use const, which is similar to a let binding but is known at compile time -> no runtime values allowed / nor changing the value *)
 
 let test_int_literal () = check_round_trip "int" "const x = 5"
 let test_float_literal () = check_round_trip "float" "const x = 3.14"
@@ -144,3 +130,7 @@ let tests = [
     ]);
 ]
 
+(* -------------------- Driver Function -------------------- *)
+
+let () =
+    Alcotest.run "Parser" tests

@@ -1,13 +1,4 @@
-.PHONY: run interpret build clean test
-
-run: build
-	./_build/default/bin/main.exe
-
-interpret: build
-ifndef FILE
-	$(error Usage: make interpret FILE=path/to/file.aera)
-endif
-	./_build/default/bin/main.exe $(FILE)
+.PHONY: build clean test
 
 build:
 	@echo Building the language...
@@ -18,5 +9,5 @@ clean:
 	@opam exec -- dune clean
 
 test:
-	@echo Running tests...
-	@opam exec -- dune test
+	@echo Running tests$(if $(TEST_PATH), in $(TEST_PATH),)...
+	@opam exec -- dune test --force $(TEST_PATH)

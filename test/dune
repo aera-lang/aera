@@ -1,4 +1,0 @@
-(test
- (name tests)
- (libraries aera alcotest)
- (modules tests test_parser test_lexer_helper test_lexer test_source))

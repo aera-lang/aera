@@ -1,6 +1,6 @@
 open Test_lexer_helper
 
-(* Keywords *)
+(* -------------------- Keyword Tests -------------------- *)
 
 let test_let_binding () =
     let tokens = lex_string "let x = 5" in
@@ -73,7 +73,7 @@ let test_fn_item () =
         eof 31 31;
     ]
    
-(* Strings *)
+(* -------------------- String Tests -------------------- *)
 
 let test_empty_string () = 
     let tokens = lex_string "let empty = \"\"" in
@@ -112,7 +112,7 @@ let test_invalid_escape_string () =
         eof 16 16;
     ]
 
-(* Characters *)
+(* -------------------- Char Tests -------------------- *)
 
 let test_simple_char () = 
     let tokens = lex_string "let c = 'a'" in
@@ -164,7 +164,7 @@ let test_invalid_char () =
         eof 9 9;
     ]
 
-(* Integers *)
+(* -------------------- Int Tests -------------------- *)
 
 let test_binary_int () = 
     let tokens = lex_string "let answer = 0b001" in
@@ -206,7 +206,7 @@ let test_decimal_int () =
         eof 15 15;
     ]
 
-(* Float *)
+(* -------------------- Float Tests -------------------- *)
 
 let test_float () = 
     let tokens = lex_string "let pi = 3.14" in
@@ -278,7 +278,7 @@ let test_malformed_sci () =
         eof 16 16;
     ]
 
-(* Comments *)
+(* -------------------- Comment Tests -------------------- *)
 
 let test_line_comment () = 
     let tokens = lex_string "# this is a comment and should be ignored" in
@@ -296,7 +296,7 @@ let test_comment_ignored () =
         eof 25 25;
     ]
 
-(* Multi-Line *)
+(* -------------------- Multi-Line Tests -------------------- *)
 
 let test_hello_world () = 
     let input = {|fn main() {
@@ -387,6 +387,8 @@ fn sum(num: int64) -> int64 {
         eof 172 172;
     ]
 
+(* -------------------- Setting Up Tests -------------------- *)
+
 let tests = [
     ("keywords", [
         Alcotest.test_case "let binding" `Quick test_let_binding;
@@ -432,3 +434,8 @@ let tests = [
         Alcotest.test_case "sum function" `Quick test_fn_and_loop;
     ]);
 ]
+
+(* -------------------- Driver Function -------------------- *)
+
+let () =
+    Alcotest.run "Lexer" tests

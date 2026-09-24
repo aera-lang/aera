@@ -1,0 +1,7 @@
+fn main() {
+    let x = 10
+    let y =
+    let z = x + y
+
+    println(z)
+}
