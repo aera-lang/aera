@@ -3,26 +3,10 @@ open Alcotest
 
 (* -------------------- Helper Functions -------------------- *)
 
-let make_parser src tokens = {
-    Parser.source = src;
-    tokens = tokens;
-    reporter = [];
-}
-
-let make_lexer src = {
-	Lexer.source = src;
-	start = 0;
-	curr = 0;
-	tokens = [];
-	reporter = [];
-}
-
-let make_source input filename = Source.create input filename
-
 let parse_source input = 
-    let src = make_source input "test.aera" in 
-    let lex = Lexer.read_tokens (make_lexer src) in 
-    Parser.parse (make_parser src lex.tokens)
+    let src = Source.create input "test.aera" in 
+    let lex = Lexer.read_tokens (Lexer.create src []) in 
+    Parser.parse (Parser.create src lex.tokens [])
 
 let pp_item fmt item =
     Format.fprintf fmt "%s" (String.concat " " (Pretty.walk_item item))
@@ -31,8 +15,6 @@ let item_testable = Alcotest.testable pp_item ( = )
 
 let check_round_trip msg input =
     let (ast1, _) = parse_source input in
-    print_endline (Pretty.to_source ast1);
-
     let printed = Pretty.to_source ast1 in
     let (ast2, _) = parse_source printed in
     Alcotest.(check (list item_testable)) msg ast1 ast2

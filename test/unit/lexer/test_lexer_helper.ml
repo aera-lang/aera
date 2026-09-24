@@ -1,21 +1,11 @@
 open Frontend
 open Alcotest
 
-(* Helper Functions *)
-
-let make_lexer src = {
-	Lexer.source = src;
-	start = 0;
-	curr = 0;
-	tokens = [];
-	reporter = [];
-}
-
-let make_source input filename = Source.create input filename
+(* -------------------- Helper Functions -------------------- *)
 
 let lex_string input =
-	let src = make_source input "test.aera" in
-  	let lex = make_lexer src in
+	let src = Source.create input "test.aera" in
+  	let lex = Lexer.create src [] in
   	let lex' = Lexer.read_tokens lex in
   	lex'.tokens
 

@@ -15,7 +15,7 @@ type t = {
 
 (* -------------------- Helper Functions -------------------- *)
 
-let create tok rep src = {
+let create src tok rep = {
     source = src;
     tokens = tok;
     reporter = rep;
