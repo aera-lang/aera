@@ -1,0 +1,13 @@
+fn print_only_even() {
+    let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    let even_odd = fn(x: int32) => x % 2 == 0
+    var i = 0
+
+    while (i < arr.len) {
+        if even_odd([i]) {
+            println(arr[i])
+        } 
+        i += 1
+    }
+}

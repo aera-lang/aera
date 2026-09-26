@@ -1,0 +1,16 @@
+fn add(a: int32, b: int32) -> int32 {
+    a + b
+}
+
+fn sub(a: int32, b: int32) -> int32 {
+    a - b
+}
+
+fn calculate() -> int32 {
+    let x = 10
+    let y = 20
+
+    var result = add(x, y)
+    result -= sub(a: y, b: x) # named parameters
+    result
+}

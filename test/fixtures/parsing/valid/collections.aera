@@ -1,0 +1,9 @@
+fn main() {
+    let numbers = [1, 2, 3, 4]
+    let first = numbers[0]
+    let second = numbers[1]
+
+    let point = (10, 20)
+    let x = point.0
+    let y = point.1
+}
