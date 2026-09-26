@@ -1,3 +1,6 @@
 (test 
  (name test_parsing)
- (libraries aera alcotest))
+ (libraries aera alcotest)
+ (deps
+  (source_tree ../../fixtures)))
+
