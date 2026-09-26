@@ -62,6 +62,11 @@ let char_of_string s =
 let report_error msg tok par = 
     { par with reporter = add_error par.source.filename tok.span msg None par.reporter }
 
+let rec sync sync_kinds par = 
+    if is_at_end par then par 
+    else if List.mem (peek par).kind sync_kinds then par 
+    else sync sync_kinds (advance par)
+
 (* -------------------- Literals --------------------*)
 
 let parse_int tok par =
@@ -118,10 +123,17 @@ and parse_expr_list closing_kind args par =
         else if tok'.kind = closing_kind then 
             par' |> parse_expr_list closing_kind args'
         else
-            let par'' = report_error 
-            (Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind)) 
-            tok' par' 
-            in (List.rev args', par'')
+            let msg = Printf.sprintf "expected ',' or '%s' after parameter" (tok_to_string closing_kind) in
+            let par'' = par' 
+                        |> report_error msg tok' 
+                        |> sync [Comma; closing_kind] 
+            in 
+            if is_at_end par'' then 
+                (List.rev args', par'') 
+            else if (peek par'').kind = Comma then 
+                (advance par'') |> parse_expr_list closing_kind args' (* recovered -> parse more args *)
+            else 
+                (List.rev args', (advance par'')) (* landed on ')' -> consume and finish *)
 
 and parse_paren_expr par =
     let (first, par') = par |> expr_bp 0 in 
@@ -131,6 +143,7 @@ and parse_paren_expr par =
     | Comma      -> let par'' = advance par' in par'' |> parse_tuple_expr first (* parse tuple *)
     | _          -> let par'' = report_error "expected ')' to close grouping" tok par' 
                     in (Grouping first, par'') (* still have a valid grouping, just not closed properly *)
+
 and parse_tuple_expr first par =
     let (rest, par') = par |> parse_expr_list RightParen [] in 
     (TupleExpr (first ::rest), par')
@@ -219,8 +232,16 @@ and parse_args_list args par =
         else if tok.kind = RightParen then 
             par' |> parse_args_list args'
         else
-            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
-            in (List.rev args', par'')
+            let par'' = par' 
+                        |> report_error "expected ',' or ')' after parameter" tok
+                        |> sync [Comma; RightParen] 
+            in 
+            if is_at_end par'' then 
+                (List.rev args', par'') 
+            else if (peek par'').kind = Comma then 
+                (advance par'') |> parse_args_list args' (* recovered -> parse more args *)
+            else 
+                (List.rev args', (advance par'')) (* landed on ')' -> consume and finish *)
                            
 (* -------------------- Binary & Assign Expressions -------------------- *)
 
@@ -281,13 +302,14 @@ and parse_closure_body params par =
 and get_identifier par =
     let tok = peek par in 
     match tok.kind with
-    | Identifier     -> let value = lexeme tok par in 
-                        let par' = advance par in 
-                        (value, par')     
-    | _              -> 
-        let par' = match tok.kind with 
-        | Illegal       -> let par'' = advance par in par'' 
-        | _             -> par |> report_error "expected identifier" tok
+    | Identifier -> 
+        let value = lexeme tok par in      
+        let par' = advance par in (value, par') 
+    | Illegal -> ("<missing>", advance par)    
+    | _  -> 
+        let par' = 
+            if is_at_end par then par|> report_error "expected identifier" tok
+            else par |> report_error "expected identifer" tok |> advance
         in
         ("<missing>", par')
 
@@ -482,8 +504,16 @@ and parse_type_list types par =
         else if tok'.kind = RightParen then 
             par' |> parse_type_list types'
         else
-            let par'' = report_error "expected ',' or ')' after type" tok' par' 
-            in (List.rev types', par'')
+            let par'' = par' 
+                        |> report_error "expected ',' or ')' after type" tok'
+                        |> sync [Comma; RightParen] 
+            in 
+            if is_at_end par'' then 
+                (List.rev types', par'') 
+            else if (peek par'').kind = Comma then 
+                (advance par'') |> parse_type_list types' (* recovered -> parse more args *)
+            else 
+                (List.rev types', (advance par'')) (* landed on ')' -> consume and finish *)
 
 (* -------------------- Let Statement  -------------------- *)
 
@@ -498,10 +528,15 @@ and let_stmt par =
         else
             (None, par')
     in
-    let (_, par''') = next par'' in (* consume = *)
-    let (value, par'''') = par''' |> expr in
-    (LetStmt {name = name; typ = typ; expr = value}, par'''')  
-
+    let tok' = peek par'' in 
+    match tok'.kind with 
+    | Equal -> 
+        let (value, par''') = (advance par'') |> expr in (* consume '=' and get the expr *)
+        (LetStmt {name = name; typ = typ; expr = value}, par''')  
+    | _ -> 
+        let par''' = par'' |> report_error "expected '=' in let binding" tok' in
+        (LetStmt {name = name; typ = typ; expr = ErrorExpr tok'.span}, par''')  
+   
 (* -------------------- Var (Mutable) Statement -------------------- *)
 
 and var_stmt par = 
@@ -515,9 +550,14 @@ and var_stmt par =
         else
             (None, par')
     in
-    let (_, par''') = next par'' in (* consume = *)
-    let (value, par'''') = par''' |> expr in
-    (VarStmt {name = name; typ = typ; expr = value}, par'''')  
+    let tok' = peek par'' in 
+    match tok'.kind with 
+    | Equal -> 
+        let (value, par''') = (advance par'') |> expr in (* consume '=' and get the expr *)
+        (VarStmt {name = name; typ = typ; expr = value}, par''')  
+    | _ -> 
+        let par''' = par'' |> report_error "expected '=' in var binding" tok' in
+        (VarStmt {name = name; typ = typ; expr = ErrorExpr tok'.span}, par''')  
 
 (* -------------------- Statement -------------------- *)
 
@@ -588,8 +628,16 @@ and parse_params_list ~type_required params par =
         else if tok.kind = RightParen then 
             par' |> parse_params_list ~type_required params'
         else
-            let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
-            in (List.rev params', par'')
+            let par'' = par'
+                        |> report_error "expected ',' or ')' after parameter" tok
+                        |> sync [Comma; RightParen] 
+            in 
+            if is_at_end par'' then 
+                (List.rev params', par'') 
+            else if (peek par'').kind = Comma then 
+                (advance par'') |> parse_params_list ~type_required params' (* recovered -> parse more params *)
+            else 
+                (List.rev params', (advance par'')) (* landed on ')' -> consume and finish *)
 
 (* -------------------- Struct Item -------------------- *)
 
@@ -684,10 +732,8 @@ let rec parse_helper items par =
             let (item, par') = item par in 
             par' |> parse_helper ( item :: items )
         | _ -> 
-            let par' = report_error "expected a top level item: function, struct, const" tok par in 
-            let par'' = advance par' in (* skip bad token *)
-            par'' |> parse_helper items
+            let par' = report_error "expected a top level item: function, struct, const" tok par in
+            let sync_kinds = [Fn; Struct; Const] in (* we sync until we see a top level item *)
+            (sync sync_kinds par') |> parse_helper items
             
 let parse par = par |> parse_helper []
-
-
