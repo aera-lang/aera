@@ -41,6 +41,9 @@ let test_single_tuple () = check_round_trip "tuple" "const x = (1,)"
 let test_fixed_array () = check_round_trip "fixed array" "const x = [1, 2, 3]"
 let test_index () = check_round_trip "index" "const x = arr[0]"
 let test_field_access () = check_round_trip "field access" "const x = obj.field"
+let test_tuple_access () = check_round_trip "tuple access" "const x = t.0"
+let test_tuple_access_chained () = check_round_trip "chained tuple access" "const x = (t.0).1"
+let test_mixed_field_and_tuple_access () = check_round_trip "mixed field/tuple access" "const x = obj.field.0"
 let test_call () = check_round_trip "call" "const x = f(1, 2)"
 let test_named_arg () = check_round_trip "named arg" "const x = f(a: 1, b: 2)"
 let test_chained () = check_round_trip "chained postfix" "const x = a.b[0].c(1)"
@@ -58,8 +61,8 @@ let test_let_var() = check_round_trip "let and var" "fn f() { let x = 1 var y: i
 
 let test_add_fn () = check_round_trip "fn add" "fn add(a: int32, b: int32) { a + b }"
 let test_sum_fn () = check_round_trip "fn sum" "fn sum(x: int32) { let res = 0 while x < 0 { res += 1 x-= 1 } res }"
-let test_closure () = check_round_trip "closure to calc power" "fn(x) => x * x"
-let test_closure_with_block () = check_round_trip "closure with block" "fn(x, y) => { if x > 0 { x - y } else { y - x } }"
+let test_closure () = check_round_trip "closure to calc power" "const f = fn(x) => x * x"
+let test_closure_with_block () = check_round_trip "closure with block" "const f = fn(x, y) => { if x > 0 { x - y } else { y - x } }"
 let test_struct () = check_round_trip "struct" "struct Point { x: int32 y: int32 }"
 let test_struct_default () = check_round_trip "struct default field" "struct Point { x: int32 = 0 y: int32 = 0 }"
 let test_struct_mixed () = check_round_trip "struct default field" "struct Point { x: int32 = 0 y: int32 }"
@@ -88,6 +91,9 @@ let tests = [
         Alcotest.test_case "fixed array" `Quick test_fixed_array;
         Alcotest.test_case "index" `Quick test_index;
         Alcotest.test_case "field access" `Quick test_field_access;
+        Alcotest.test_case "tuple access" `Quick test_tuple_access;
+        Alcotest.test_case "chained tuple access" `Quick test_tuple_access_chained;
+        Alcotest.test_case "mixed field/tuple access" `Quick test_mixed_field_and_tuple_access;
         Alcotest.test_case "call" `Quick test_call;
         Alcotest.test_case "named arg" `Quick test_named_arg;
         Alcotest.test_case "chained postfix" `Quick test_chained;

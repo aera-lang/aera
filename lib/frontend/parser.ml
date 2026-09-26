@@ -161,15 +161,29 @@ and parse_index lhs min_bp par =
         in
         par''' |> loop (Index { target = lhs; index = index }) min_bp
 
-(* -------------------- Field Access Expression -------------------- *)
+(* -------------------- Field / Tuple Access Expression -------------------- *)
 
-and parse_field_access lhs min_bp par = 
+and parse_tuple_int tok par =
+    match Int64.of_string_opt (lexeme tok par) with
+    | Some value    -> Ok (value, advance par)
+    | None          -> Error ("could not parse tuple index integer")
+
+and parse_field_or_tuple_access lhs min_bp par = 
     let bp = postfix_bp FieldAccess in 
     if bp < min_bp then (lhs, par) 
     else
         let par' = advance par in (* consume . *)
-        let (name, par'') = get_identifier par' in 
-        par'' |> loop (FieldAccess { target = lhs; field = name }) min_bp
+        let tok = peek par' in 
+        if tok.kind = IntLiteral then 
+            match parse_tuple_int tok par' with 
+            | Ok (value, par'') -> 
+                    par'' |> loop (TupleAccess { target = lhs; index = value }) min_bp
+            | Error msg -> 
+                let par'' = report_error msg tok par' in
+                (ErrorExpr tok.span, advance par'')
+        else
+            let (name, par'') = get_identifier par' in 
+            par'' |> loop (FieldAccess { target = lhs; field = name }) min_bp
 
 (* -------------------- Call Expressions -------------------- *)
 
@@ -237,8 +251,30 @@ and parse_assign op lhs min_bp par =
 (* -------------------- Array Expression -------------------- *)
 
 and parse_array_expr par =
-    let par' = advance par in (* consume '[' token *)
-    let (rest, par'') = par' |> parse_expr_list RightBracket [] in (ArrayExpr rest, par'')
+    let (rest, par') = par |> parse_expr_list RightBracket [] in (ArrayExpr rest, par')
+
+(* -------------------- Closure Expression -------------------- *)
+
+and parse_closure par = 
+    let tok = peek par in 
+    match tok.kind with 
+    | LeftParen -> 
+        let (params, par') = (advance par) |> parse_params_list ~type_required:false [] in 
+        par' |> parse_closure_body params
+    | _ -> 
+        let par' = report_error "expected '(' to start closure parameters" tok par in 
+        (ErrorExpr tok.span, advance par')
+
+and parse_closure_body params par =
+    let tok = peek par in 
+    match tok.kind with 
+    | EqualGreater ->
+        let par' = advance par in (* consume '=>' *)
+        let (expr, par'') = expr par' in 
+        (Closure { params = params; body = expr; }, par'')
+    | _ -> 
+        let par' = report_error "expected '=>' to follow after closure parameters" tok par in 
+        (Closure { params = params; body = ErrorExpr tok.span }, par')
 
 (* -------------------- Get Identifier -------------------- *)
 
@@ -274,7 +310,9 @@ and expr_bp min_bp par =
     (* Grouped Expression *)
     | LeftParen                 -> par' |> parse_paren_expr
     (* Array Expression *)
-    | LeftBracket               -> par |> parse_array_expr
+    | LeftBracket               -> par' |> parse_array_expr
+    (* Closure Expression *)    
+    | Fn                        -> par' |> parse_closure
     (* Invalid Token *)
     | _                         -> par' |> parse_unrecognized tok                       
     in
@@ -284,17 +322,17 @@ and expr_bp min_bp par =
 and loop lhs min_bp par = 
     let tok = peek par in 
     match tok.kind with 
-    | EOF                               -> (lhs, par)
+    | EOF                              -> (lhs, par)
     (* Index *)
-    | LeftBracket                       -> par |> parse_index lhs min_bp
-    (* Field Access *)
-    | Period                            -> par |> parse_field_access lhs min_bp
+    | LeftBracket                      -> par |> parse_index lhs min_bp
+    (* Field Access OR Tuple Access *)
+    | Period                           -> par |> parse_field_or_tuple_access lhs min_bp
     (* Call Expression *)
-    | LeftParen                         -> par |> parse_call lhs
+    | LeftParen                        -> par |> parse_call lhs
     (* Binary / Assign Operators *)
     | _ when is_binary_op tok.kind     -> par |> parse_binary (to_binary_op tok.kind) lhs min_bp
     | _ when is_assign_op tok.kind     -> par |> parse_assign (to_assign_op tok.kind) lhs min_bp
-    | _                                 -> (lhs, par)
+    | _                                -> (lhs, par)
 
 (* -------------------- Expression With Block -------------------- *)
 
@@ -553,29 +591,6 @@ and parse_params_list ~type_required params par =
             let par'' = report_error  "expected ',' or ')' after parameter" tok par' 
             in (List.rev params', par'')
 
-(* -------------------- Closure Item -------------------- *)
-
-and closure_item par = 
-    let (tok, par') = next par in 
-    match tok.kind with 
-    | LeftParen -> 
-        let (params, par'') = par' |> parse_params_list ~type_required:false [] in 
-        par'' |> parse_closure_body params
-    | _ -> 
-        let par'' = report_error "expected '(' to start closure parameters" tok par' in 
-        (ErrorItem tok.span, par'')
-
-and parse_closure_body params par =
-    let tok = peek par in 
-    match tok.kind with 
-    | EqualGreater ->
-        let par' = advance par in (* consume '=>' *)
-        let (expr, par'') = expr par' in 
-        (ClosureItem { params = params; body = expr; }, par'')
-    | _ -> 
-        let par' = report_error "expected '=>' to follow after closure parameters" tok par in 
-        (ClosureItem { params = params; body = ErrorExpr tok.span }, par')
-
 (* -------------------- Struct Item -------------------- *)
 
 and struct_item par =
@@ -649,16 +664,10 @@ and const_item par =
 
 (* -------------------- Item -------------------- *)
 
-and fn_or_closure_item par =
-    let tok = peek par in 
-    match tok.kind with 
-    | Identifier    -> fn_item par
-    | _             -> closure_item par (* fn with NO identifier is always assumed to be a closure *)
-
 and item par = 
     let tok = peek par in 
     match tok.kind with 
-    | Fn        -> fn_or_closure_item (advance par)
+    | Fn        -> fn_item (advance par)
     | Struct    -> struct_item (advance par)
     | Const     -> const_item (advance par)
     | _         -> failwith "todo: implement variant_item"
@@ -675,7 +684,7 @@ let rec parse_helper items par =
             let (item, par') = item par in 
             par' |> parse_helper ( item :: items )
         | _ -> 
-            let par' = report_error "expected a top level item: function, closure, struct, const" tok par in 
+            let par' = report_error "expected a top level item: function, struct, const" tok par in 
             let par'' = advance par' in (* skip bad token *)
             par'' |> parse_helper items
             

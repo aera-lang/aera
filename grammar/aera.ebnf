@@ -1,7 +1,6 @@
 program = { item } EOF ;
 
 item = function_item 
-     | closure_item
      | struct_item
      | const_item ;
 
@@ -10,8 +9,6 @@ item = function_item
 function_item = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] block_expression ;
 parameter_list = parameter { "," parameter } ;
 parameter = identifier ":" type ;
-
-closure_item = "fn" "(" [ parameter_list ] ")" "=>" expression ;
 
 struct_item = "struct" identifier "{" { field_declaration } "}" ;
 field_declaration = identifier ":" type [ "=" expression ] ;
@@ -31,9 +28,12 @@ expression_without_block = literal_expression
                          | operator_expression
                          | grouped_expression
                          | index_expression
+                         | field_access_expression
                          | call_expression
                          | array_expression
                          | tuple_expression
+                         | tuple_access_expression
+                         | closure_expression
                          | struct_expression ;
 
 block_expression = "{" { statement } [ expression ] "}" ;
@@ -106,6 +106,8 @@ tuple_expression_list = expression "," [ expression_list ] ;
 
 expression_list = expression { ","  expression } ;
 
+tuple_access_expression = expression "." integer_literal ;
+closure_expression = "fn" "(" [ parameter_list ] ")" "=>" expression ;
 struct_expression = call_expression ;
 
 statement = item

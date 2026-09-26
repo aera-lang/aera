@@ -1,13 +1,11 @@
 open Int64
 open Span
 
-type identifier = string
-
 type t = 
 | PrimitiveType of primitive_type
 | ArrayType of t * array_size
 | TupleType of t list
-| UserType of identifier (* covers primitive types alongside user-defined types *)
+| UserType of string (* covers primitive types alongside user-defined types *)
 | ErrorType of Span.t 
 
 and primitive_type = 

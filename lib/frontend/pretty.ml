@@ -87,20 +87,22 @@ let format_primitive_typ typ =
 
 let rec walk_expr expr =
     match expr with 
-    | Literal (IntLiteral n)                            -> [(Int64.to_string n)]
-    | Literal (FloatLiteral f)                          -> [(string_of_float f)]
+    | Literal (IntLiteral n)                            -> [Int64.to_string n]
+    | Literal (FloatLiteral f)                          -> [string_of_float f]
     | Literal (CharLiteral c)                           -> ["'" ^ escape_char c ^ "'"]
     | Literal (StringLiteral s)                         -> ["\"" ^  escape_string s ^ "\""]
-    | Literal (BoolLiteral b)                           -> [(Bool.to_string b)]
+    | Literal (BoolLiteral b)                           -> [Bool.to_string b]
     | Ident s                                           -> [s]
     | Grouping expr'                                    -> walk_grouping expr'
     | Index { target; index }                           -> walk_index target index
     | FieldAccess { target; field }                     -> walk_field_access target field
+    | TupleAccess { target; index }                     -> walk_tuple_access target index
     | Call { callee; args }                             -> walk_call callee args
     | Binary { lhs; op; rhs }                           -> walk_binary lhs op rhs
     | Assign { lhs; op; rhs }                           -> walk_assign lhs op rhs
     | Unary { op; rhs }                                 -> walk_unary op rhs
     | Block { stmts; expr; }                            -> walk_block stmts expr
+    | Closure { params; body }                          -> walk_closure params body
     | InfiniteLoop expr'                                -> walk_infinite_loop expr'
     | WhileLoop { cond; body; }                         -> walk_while_loop cond body
     | IfExpr { cond; then_branch; else_branch; }        -> walk_if cond then_branch else_branch
@@ -115,6 +117,9 @@ and walk_index target index =
 
 and walk_field_access target field = 
     (walk_expr target) @ ["."] @ [field]
+
+and walk_tuple_access target index = 
+    (walk_expr target) @ ["."] @ [Int64.to_string index]
 
 and walk_call callee args = 
     (walk_expr callee) @ ["("] @ (walk_args args) @ [")"]
@@ -146,6 +151,9 @@ and walk_block stmts tail_expr =
     | None      -> []
     in
     ["{"] @ stmt_tokens @ tail_token @ ["}"]
+
+and walk_closure params body =
+    ["fn"; "("] @ (walk_params params) @ [")"] @ ["=>"] @ (walk_expr body)
 
 and walk_infinite_loop body = 
     ["loop"] @ (walk_expr body)
@@ -212,7 +220,6 @@ and walk_binding keyword name typ expr =
 and walk_item item =
     match item with 
     | FnItem { name; params; return_type; body }    -> walk_fn name params return_type body 
-    | ClosureItem { params; body }                  -> walk_closure params body
     | StructItem { name; fields }                   -> walk_struct name fields
     | ConstItem { name; typ; expr }                 -> walk_const name typ expr
     | ErrorItem _                                   -> ["<error_item>"]
@@ -234,10 +241,6 @@ and walk_fn name params return_type body =
     | None      -> []
     in
     ["fn"; name; "("] @ (walk_params params) @ [")"] @ ret_token @ (walk_expr body)
-
-
-and walk_closure params body =
-    ["fn"; "("] @ (walk_params params) @ [")"] @ ["=>"] @ (walk_expr body)
 
 and walk_struct name fields =
     ["struct"; name; "{"] @ (List.concat_map walk_field fields) @ ["}"]

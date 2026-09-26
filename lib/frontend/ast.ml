@@ -40,17 +40,12 @@ type literal =
 | StringLiteral of string
 | BoolLiteral of bool
 
-(* strings *)
-
-(* type identifier = string *)
-
 (* Program *)
 
 type program = item list (* no need to be a record *)
 
 and item =
 | FnItem of fn_item
-| ClosureItem of closure_item
 | StructItem of struct_item
 | ConstItem of const_item
 | ErrorItem of Span.t
@@ -60,11 +55,6 @@ and fn_item = {
     name: string;
     params: param list;
     return_type: typ option; (* if omitted, infer *)
-    body: expr;
-}
-
-and closure_item = {
-    params: param list;
     body: expr;
 }
 
@@ -98,11 +88,13 @@ and expr =
 | Grouping          of expr
 | Index             of { target: expr; index: expr; }
 | FieldAccess       of { target: expr; field: string; }
+| TupleAccess       of { target: expr; index: Int64.t; }
 | Call              of { callee: expr; args: argument list }
 | Binary            of { lhs: expr; op: binary_op; rhs: expr }
 | Assign            of { lhs: expr; op: assign_op; rhs: expr }
 | Unary             of { op: unary_op; rhs: expr }
 | Block             of block
+| Closure           of closure
 | InfiniteLoop      of expr
 | WhileLoop         of { cond: expr; body: expr }
 | IfExpr            of { cond: expr; then_branch: expr; else_branch: expr option }
@@ -117,6 +109,11 @@ and argument =
 and block = {
     stmts: stmt list;
     expr: expr option; 
+}
+
+and closure = {
+    params: param list;
+    body: expr;
 }
 
 (* Statements *)
