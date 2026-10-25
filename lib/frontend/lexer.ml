@@ -275,16 +275,16 @@ let read_decimal_number lex =
         else
             lex'' |> add_token IntLiteral
 
-let rec read_identifier_helper lex =
+let rec read_identifier_helper lex = (* shouldn't return a result *)
      match peek lex with
     | Some c when is_identifier_char c ->
         let (_, lex') = advance lex in
         read_identifier_helper lex'
-    | _ -> Ok lex
+    | _ -> lex
 
 let read_identifier lex =
     let open Result.Syntax in
-    let+ lex' = read_identifier_helper lex in 
+    let lex' = read_identifier_helper lex in 
     match String.lowercase_ascii (lexeme lex') with 
     (* Bool Keywords*)
     | "true"        -> lex' |> add_token True
@@ -446,12 +446,7 @@ let read_token lex =
             | Ok lex -> lex
             | Error (msg, lex) -> lex |> report_error msg
         end
-    | c when is_identifier_start c -> 
-        begin
-            match read_identifier lex with
-            | Ok lex -> lex
-            | Error (msg, lex) -> lex |> report_error msg
-        end
+    | c when is_identifier_start c -> read_identifier lex
     (* Character not supported in language, report error *)
     | _ -> lex |> report_error (Printf.sprintf "unexpected character '%c'" c)
         
