@@ -119,8 +119,7 @@ let close_char lex =
     
 let read_char lex =
     let open Result.Syntax in
-    if peek lex = Some '\'' then
-        let (_, lex') = advance lex in Error ("empty character literal", lex')
+    if peek lex = Some '\'' then Error ("empty character literal", bump lex) (* used BUMP instead of advance *)
     else
         let (c, lex') = advance lex in
         let* lex'' = resolve_char lex' c in 
