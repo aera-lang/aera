@@ -114,8 +114,7 @@ let close_char lex =
             let lex' = skip_until_closing_quote lex '\'' in
             Error ("character literal must contain only one character", lex')
     else
-        let (_, lex') = advance lex in
-        Ok lex'
+        Ok (bump lex) (* changed from advance to BUMP *)
     
 let read_char lex =
     let open Result.Syntax in
